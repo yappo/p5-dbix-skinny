@@ -12,6 +12,7 @@ use DBI;
 use DBIx::Skinny::Iterator;
 use DBIx::Skinny::SQLStructure;
 use DBIx::Skinny::DBD;
+use Digest::SHA1 qw/sha1_hex/;
 
 use Data::Dumper;
 
@@ -144,7 +145,24 @@ sub _get_iterator {
         skinny        => $class,
         sth           => $sth,
         sql_structure => $structure,
+        row_class     => $class->_row_class($structure),
     );
+}
+
+sub _row_class {
+    my ($class, $structure) = @_;
+    my $row_class = 'DBIx::Skinny::Row::C' . sha1_hex $structure->stmt . $$ . $structure;
+
+    eval qq|
+        package $row_class;
+        use strict;
+        use warnings;
+        use base 'DBIx::Skinny::Row';
+        1;
+    |;
+    die "can't create row_class : $row_class $@" if $@;
+
+    return $row_class;
 }
 
 sub _execute {

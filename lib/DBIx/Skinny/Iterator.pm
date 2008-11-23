@@ -28,7 +28,7 @@ sub iterator {
         return;
     }
 
-    my $obj = DBIx::Skinny::Row->new(
+    my $obj = $self->{row_class}->new(
         {
             row_data      => $row,
             skinny        => $self->{skinny},
