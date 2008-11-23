@@ -17,7 +17,8 @@ BEGIN {
     }
 }
 
-__PACKAGE__->mk_classdata($_) for qw/_inflate pk/;
+__PACKAGE__->mk_classdata($_) for qw/pk/;
+__PACKAGE__->mk_classdata(_inflate => {});
 __PACKAGE__->mk_classdata(columns => []);
 __PACKAGE__->mk_classdata(_utf8_columns => {});
 
