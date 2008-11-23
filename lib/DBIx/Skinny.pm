@@ -145,11 +145,11 @@ sub _get_iterator {
         skinny        => $class,
         sth           => $sth,
         sql_structure => $structure,
-        row_class     => $class->_row_class($structure),
+        row_class     => $class->_mk_row_class_by_stmt($structure),
     );
 }
 
-sub _row_class {
+sub _mk_row_class_by_stmt {
     my ($class, $structure) = @_;
     my $row_class = 'DBIx::Skinny::Row::C' . sha1_hex $structure->stmt . $$ . $structure;
 
