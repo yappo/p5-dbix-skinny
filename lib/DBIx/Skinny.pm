@@ -45,7 +45,7 @@ sub _load_schemas {
 
 sub _setup_dbd {
     my $class = shift;
-    (my $dbd_type = $class->dsn) =~ s/^dbi:(\w*):.+/$1/;
+    (my $dbd_type = $class->dsn) =~ s/^dbi:(\w*):.*/$1/;
     $class->dbd(DBIx::Skinny::DBD->new($dbd_type));
 }
 
