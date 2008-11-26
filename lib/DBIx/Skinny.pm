@@ -151,16 +151,10 @@ sub _get_iterator {
 
 sub _mk_row_class_by_stmt {
     my ($class, $structure) = @_;
+
     my $row_class = 'DBIx::Skinny::Row::C' . sha1_hex $structure->stmt . $$ . $structure;
 
-    eval qq|
-        package $row_class;
-        use strict;
-        use warnings;
-        use base 'DBIx::Skinny::Row';
-        1;
-    |;
-    die "can't create row_class : $row_class $@" if $@;
+    { no strict 'refs'; @{"$row_class\::ISA"} = ('DBIx::Skinny::Row'); }  ## no critic
 
     return $row_class;
 }
