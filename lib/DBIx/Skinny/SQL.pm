@@ -9,73 +9,76 @@ Class::Accessor::Lite->mk_accessors(
         from joins where bind limit offset group order
         having where_values column_mutator index_hint
         comment
+        skinny
     /
 );
 
 sub new {
     my ($class, $args) = @_;
-    my $stmt = bless {%{$args||{}}}, $class;
+    my $self = bless {%{$args||{}}}, $class;
 
-    $stmt->select([]);
-    $stmt->distinct(0);
-    $stmt->select_map({});
-    $stmt->select_map_reverse({});
-    $stmt->bind([]);
-    $stmt->from([]);
-    $stmt->where([]);
-    $stmt->where_values({});
-    $stmt->having([]);
-    $stmt->joins([]);
-    $stmt->index_hint({});
-    $stmt;
+    for my $name (qw/ select from joins bind group order where having /) {
+        unless ($self->$name && ref $self->$name eq 'ARRAY') {
+            $self->$name ? $self->$name([ $self->$name ]) : $self->$name([]);
+        }
+    }
+    for my $name (qw/ select_map select_map_reverse where_values index_hint/) {
+        $self->$name( {} ) unless $self->$name && ref $self->$name eq 'HASH';
+    }
+
+    $self->distinct(0) unless $self->distinct;
+
+    $self;
 }
 
 sub add_select {
-    my $stmt = shift;
+    my $self = shift;
     my($term, $col) = @_;
     $col ||= $term;
-    push @{ $stmt->select }, $term;
-    $stmt->select_map->{$term} = $col;
-    $stmt->select_map_reverse->{$col} = $term;
+    push @{ $self->select }, $term;
+    $self->select_map->{$term} = $col;
+    $self->select_map_reverse->{$col} = $term;
 }
 
 sub add_join {
-    my $stmt = shift;
+    my $self = shift;
     my($table, $joins) = @_;
-    push @{ $stmt->joins }, {
+    push @{ $self->joins }, {
         table => $table,
         joins => ref($joins) eq 'ARRAY' ? $joins : [ $joins ],
     };
 }
 
 sub add_index_hint {
-    my $stmt = shift;
+    my $self = shift;
     my($table, $hint) = @_;
-    $stmt->index_hint->{$table} = {
+    $self->index_hint->{$table} = {
         type => $hint->{type} || 'USE',
         list => ref($hint->{list}) eq 'ARRAY' ? $hint->{list} : [ $hint->{list} ],
     };
 }
 
 sub as_sql {
-    my $stmt = shift;
+    my $self = shift;
     my $sql = '';
-    if (@{ $stmt->select }) {
+    if (@{ $self->select }) {
         $sql .= 'SELECT ';
-        $sql .= 'DISTINCT ' if $stmt->distinct;
+        $sql .= 'DISTINCT ' if $self->distinct;
         $sql .= join(', ',  map {
-            my $alias = $stmt->select_map->{$_};
+            my $alias = $self->select_map->{$_};
+            !$alias                         ? $_ :
             $alias && /(?:^|\.)\Q$alias\E$/ ? $_ : "$_ $alias";
-        } @{ $stmt->select }) . "\n";
+        } @{ $self->select }) . "\n";
     }
+
     $sql .= 'FROM ';
 
     ## Add any explicit JOIN statements before the non-joined tables.
-    if ($stmt->joins && @{ $stmt->joins }) {
+    if ($self->joins && @{ $self->joins }) {
         my $initial_table_written = 0;
-        for my $j (@{ $stmt->joins }) {
+        for my $j (@{ $self->joins }) {
             my($table, $joins) = map { $j->{$_} } qw( table joins );
-            $table = $stmt->_add_index_hint($table); ## index hint handling
+            $table = $self->_add_index_hint($table); ## index hint handling
             $sql .= $table unless $initial_table_written++;
             for my $join (@{ $j->{joins} }) {
                 $sql .= ' ' .
@@ -83,22 +86,22 @@ sub as_sql {
                         $join->{condition};
             }
         }
-        $sql .= ', ' if @{ $stmt->from };
+        $sql .= ', ' if @{ $self->from };
     }
 
-    if ($stmt->from && @{ $stmt->from }) {
-        $sql .= join ', ', map { $stmt->_add_index_hint($_) } @{ $stmt->from };
+    if ($self->from && @{ $self->from }) {
+        $sql .= join ', ', map { $self->_add_index_hint($_) } @{ $self->from };
     }
 
     $sql .= "\n";
-    $sql .= $stmt->as_sql_where;
+    $sql .= $self->as_sql_where;
 
-    $sql .= $stmt->as_aggregate('group');
-    $sql .= $stmt->as_sql_having;
-    $sql .= $stmt->as_aggregate('order');
+    $sql .= $self->as_aggregate('group');
+    $sql .= $self->as_sql_having;
+    $sql .= $self->as_aggregate('order');
 
-    $sql .= $stmt->as_limit;
-    my $comment = $stmt->comment;
+    $sql .= $self->as_limit;
+    my $comment = $self->comment;
     if ($comment && $comment =~ /([ 0-9a-zA-Z.:;()_#&,]+)/) {
         $sql .= "-- $1" if $1;
     }
@@ -106,63 +109,67 @@ sub as_sql {
 }
 
 sub as_limit {
-    my $stmt = shift;
-    my $n = $stmt->limit or
+    my $self = shift;
+    my $n = $self->limit or
         return '';
     die "Non-numerics in limit clause ($n)" if $n =~ /\D/;
     return sprintf "LIMIT %d%s\n", $n,
-           ($stmt->offset ? " OFFSET " . int($stmt->offset) : "");
+           ($self->offset ? " OFFSET " . int($self->offset) : "");
 }
 
 sub as_aggregate {
-    my $stmt = shift;
-    my($set) = @_;
+    my ($self, $set) = @_;
 
-    if (my $attribute = $stmt->$set()) {
-        my $elements = (ref($attribute) eq 'ARRAY') ? $attribute : [ $attribute ];
-        return uc($set) . ' BY '
-            . join(', ', map { $_->{column} . ($_->{desc} ? (' ' . $_->{desc}) : '') } @$elements)
-                . "\n";
+    return '' unless my $attribute = $self->$set();
+
+    my $ref = ref $attribute;
+
+    if ($ref eq 'ARRAY' && scalar @$attribute == 0) {
+        return '';
     }
 
-    return '';
+    my $elements = ($ref eq 'ARRAY') ? $attribute : [ $attribute ];
+    return uc($set)
+           . ' BY '
+           . join(', ', map { $_->{column} . ($_->{desc} ? (' ' . $_->{desc}) : '') } @$elements)
+           . "\n";
 }
 
 sub as_sql_where {
-    my $stmt = shift;
-    $stmt->where && @{ $stmt->where } ?
-        'WHERE ' . join(' AND ', @{ $stmt->where }) . "\n" :
+    my $self = shift;
+    $self->where && @{ $self->where } ?
+        'WHERE ' . join(' AND ', @{ $self->where }) . "\n" :
         '';
 }
 
 sub as_sql_having {
-    my $stmt = shift;
-    $stmt->having && @{ $stmt->having } ?
-        'HAVING ' . join(' AND ', @{ $stmt->having }) . "\n" :
+    my $self = shift;
+    $self->having && @{ $self->having } ?
+        'HAVING ' . join(' AND ', @{ $self->having }) . "\n" :
         '';
 }
 
 sub add_where {
-    my $stmt = shift;
+    my $self = shift;
     ## xxx Need to support old range and transform behaviors.
     my($col, $val) = @_;
     Carp::croak("Invalid/unsafe column name $col") unless $col =~ /^[\w\.]+$/;
-    my($term, $bind, $tcol) = $stmt->_mk_term($col, $val);
-    push @{ $stmt->{where} }, "($term)";
-    push @{ $stmt->{bind} }, @$bind;
-    $stmt->where_values->{$tcol} = $val;
+    my($term, $bind, $tcol) = $self->_mk_term($col, $val);
+    push @{ $self->{where} }, "($term)";
+    push @{ $self->{bind} }, @$bind;
+    $self->where_values->{$tcol} = $val;
 }
 
 sub add_complex_where {
-    my $stmt = shift;
+    my $self = shift;
     my ($terms) = @_;
-    my ($where, $bind) = $stmt->_parse_array_terms($terms);
-    push @{ $stmt->{where} }, $where;
-    push @{ $stmt->{bind} }, @$bind;
+    my ($where, $bind) = $self->_parse_array_terms($terms);
+    push @{ $self->{where} }, $where;
+    push @{ $self->{bind} }, @$bind;
 }
 
 sub _parse_array_terms {
-    my $stmt = shift;
+    my $self = shift;
     my ($term_list) = @_;
 
     my @out;
@@ -179,8 +186,8 @@ sub _parse_array_terms {
             # bag of terms to apply $logic with
             my @out;
             foreach my $t2 ( keys %$t ) {
-                my ($term, $bind, $col) = $stmt->_mk_term($t2, $t->{$t2});
-                $stmt->where_values->{$col} = $t->{$t2};
+                my ($term, $bind, $col) = $self->_mk_term($t2, $t->{$t2});
+                $self->where_values->{$col} = $t->{$t2};
                 push @out, $term;
                 push @bind, @$bind;
             }
@@ -188,7 +195,7 @@ sub _parse_array_terms {
         }
         elsif (ref $t eq 'ARRAY') {
             # another array of terms to process!
-            my ($where, $bind) = $stmt->_parse_array_terms( $t );
+            my ($where, $bind) = $self->_parse_array_terms( $t );
             push @bind, @$bind;
             $out = '(' . $where . ')';
         }
@@ -198,28 +205,28 @@ sub _parse_array_terms {
 }
 
 sub has_where {
-    my $stmt = shift;
+    my $self = shift;
     my($col, $val) = @_;
 
     # TODO: should check if the value is same with $val?
-    exists $stmt->where_values->{$col};
+    exists $self->where_values->{$col};
 }
 
 sub add_having {
-    my $stmt = shift;
+    my $self = shift;
     my($col, $val) = @_;
 
-    if (my $orig = $stmt->select_map_reverse->{$col}) {
+    if (my $orig = $self->select_map_reverse->{$col}) {
         $col = $orig;
     }
 
-    my($term, $bind) = $stmt->_mk_term($col, $val);
-    push @{ $stmt->{having} }, "($term)";
-    push @{ $stmt->{bind} }, @$bind;
+    my($term, $bind) = $self->_mk_term($col, $val);
+    push @{ $self->{having} }, "($term)";
+    push @{ $self->{bind} }, @$bind;
 }
 
 sub _mk_term {
-    my $stmt = shift;
+    my $self = shift;
     my($col, $val) = @_;
     my $term = '';
     my (@bind, $m);
@@ -234,26 +241,26 @@ sub _mk_term {
 
             my @terms;
             for my $v (@values) {
-                my($term, $bind) = $stmt->_mk_term($col, $v);
+                my($term, $bind) = $self->_mk_term($col, $v);
                 push @terms, "($term)";
                 push @bind, @$bind;
             }
             $term = join " $logic ", @terms;
         } else {
-            $col = $m->($col) if $m = $stmt->column_mutator;
+            $col = $m->($col) if $m = $self->column_mutator;
             $term = "$col IN (".join(',', ('?') x scalar @$val).')';
             @bind = @$val;
         }
     } elsif (ref($val) eq 'HASH') {
         my $c = $val->{column} || $col;
-        $c = $m->($c) if $m = $stmt->column_mutator;
+        $c = $m->($c) if $m = $self->column_mutator;
         $term = "$c $val->{op} ?";
         push @bind, $val->{value};
     } elsif (ref($val) eq 'SCALAR') {
-        $col = $m->($col) if $m = $stmt->column_mutator;
+        $col = $m->($col) if $m = $self->column_mutator;
         $term = "$col $$val";
     } else {
-        $col = $m->($col) if $m = $stmt->column_mutator;
+        $col = $m->($col) if $m = $self->column_mutator;
         $term = "$col = ?";
         push @bind, $val;
     }
@@ -261,9 +268,9 @@ sub _mk_term {
 }
 
 sub _add_index_hint {
-    my $stmt = shift;
+    my $self = shift;
     my ($tbl_name) = @_;
-    my $hint = $stmt->index_hint->{$tbl_name};
+    my $hint = $self->index_hint->{$tbl_name};
     return $tbl_name unless $hint && ref($hint) eq 'HASH';
     if ($hint->{list} && @{ $hint->{list} }) {
         return $tbl_name . ' ' . uc($hint->{type} || 'USE') . ' INDEX (' . 
@@ -271,6 +278,11 @@ sub _add_index_hint {
                 ')';
     }
     return $tbl_name;
+}
+
+sub retrieve {
+    my $self = shift;
+    $self->skinny->search_by_sql($self->as_sql,@{$self->bind});
 }
 
 'base code from Data::ObjectDriver::SQL';

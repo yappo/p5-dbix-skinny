@@ -156,6 +156,118 @@ describe 'basic search' => run {
         @rows = map { +{name => $_->name} } Skinny->search_by_sql('SELECT name FROM user where id = ?',3);
         is_deeply \@rows, [];
     };
+    test 'incremental search' => run {
+        my $rs = Skinny->resultset(
+            {
+                select => [qw/id name/],
+                from   => [qw/user/],
+            }
+        );
+        is $rs->as_sql, "SELECT id, name\nFROM user\n";
+        my @rows = map { $_->get_columns } $rs->retrieve;
+        is_deeply \@rows, [
+            {
+                id   => 1,
+                name => 'nekokak',
+            },
+            {
+                id   => 2,
+                name => 'nomaneko',
+            },
+        ];
+
+        $rs->add_select('date');
+        is $rs->as_sql, "SELECT id, name, date\nFROM user\n";
+        @rows = map { $_->get_columns } $rs->retrieve;
+        is_deeply \@rows, [
+            {
+                id   => 1,
+                name => 'nekokak',
+                date => '2008-09-09T00:00:00',
+            },
+            {
+                id   => 2,
+                name => 'nomaneko',
+                date => '2008-12-31T00:00:00',
+            },
+        ];
+
+        $rs->order({ column => 'id', desc => 'DESC' });
+        is $rs->as_sql, "SELECT id, name, date\nFROM user\nORDER BY id DESC\n";
+        @rows = map { $_->get_columns } $rs->retrieve;
+        is_deeply \@rows, [
+            {
+                id   => 2,
+                name => 'nomaneko',
+                date => '2008-12-31T00:00:00',
+            },
+            {
+                id   => 1,
+                name => 'nekokak',
+                date => '2008-09-09T00:00:00',
+            },
+        ];
+
+        $rs->limit(1);
+        is $rs->as_sql, "SELECT id, name, date\nFROM user\nORDER BY id DESC\nLIMIT 1\n";
+        @rows = map { $_->get_columns } $rs->retrieve;
+        is_deeply \@rows, [
+            {
+                id   => 2,
+                name => 'nomaneko',
+                date => '2008-12-31T00:00:00',
+            },
+        ];
+
+        $rs->offset(1);
+        is $rs->as_sql, "SELECT id, name, date\nFROM user\nORDER BY id DESC\nLIMIT 1 OFFSET 1\n";
+        @rows = map { $_->get_columns } $rs->retrieve;
+        is_deeply \@rows, [
+            {
+                id   => 1,
+                name => 'nekokak',
+                date => '2008-09-09T00:00:00',
+            },
+        ];
+
+        $rs->limit(0); $rs->offset(0);
+        is $rs->as_sql, "SELECT id, name, date\nFROM user\nORDER BY id DESC\n";
+        @rows = map { $_->get_columns } $rs->retrieve;
+        is_deeply \@rows, [
+            {
+                id   => 2,
+                name => 'nomaneko',
+                date => '2008-12-31T00:00:00',
+            },
+            {
+                id   => 1,
+                name => 'nekokak',
+                date => '2008-09-09T00:00:00',
+            },
+        ];
+
+        $rs->add_where(name => 'nekokak');
+        is $rs->as_sql, "SELECT id, name, date\nFROM user\nWHERE (name = ?)\nORDER BY id DESC\n";
+        @rows = map { $_->get_columns } $rs->retrieve;
+        is_deeply \@rows, [
+            {
+                id   => 1,
+                name => 'nekokak',
+                date => '2008-09-09T00:00:00',
+            },
+        ];
+
+        $rs->add_where(id => 1);
+        is $rs->as_sql, "SELECT id, name, date\nFROM user\nWHERE (name = ?) AND (id = ?)\nORDER BY id DESC\n";
+        @rows = map { $_->get_columns } $rs->retrieve;
+        is_deeply \@rows, [
+            {
+                id   => 1,
+                name => 'nekokak',
+                date => '2008-09-09T00:00:00',
+            },
+        ];
+    };
     cleanup {
         Skinny->do(q{DROP TABLE user});
         Skinny->do(q{DROP TABLE prof});

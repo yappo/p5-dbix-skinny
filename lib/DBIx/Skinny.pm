@@ -12,6 +12,7 @@ use DBI;
 use DBIx::Skinny::Iterator;
 use DBIx::Skinny::SQLStructure;
 use DBIx::Skinny::DBD;
+use DBIx::Skinny::SQL;
 use Digest::SHA1 qw/sha1_hex/;
 
 use Data::Dumper;
@@ -57,6 +58,12 @@ sub _connect {
 }
 
 sub dbh { shift->_connect }
+
+sub resultset {
+    my ($class, $args) = @_;
+    $args->{skinny} = $class;
+    DBIx::Skinny::SQL->new($args);
+}
 
 sub do {
     my ($class, $sql) = @_;
