@@ -4,11 +4,10 @@ use Test::Declare;
 use lib './t';
 use utf8;
 use Skinny;
-use Data::Dumper;
 
 plan tests => blocks;
 
-describe 'basic search' => run {
+describe 'basic test case' => run {
     init {
         Skinny->do(q{
             CREATE TABLE user (
@@ -37,6 +36,7 @@ describe 'basic search' => run {
             )
         });
     };
+
     test 'insert hook' => run {
         Skinny->insert(job => { id => 1, name => 'あああああ' });
         my @rows = map { $_->get_columns } Skinny->search('job');
@@ -48,7 +48,8 @@ describe 'basic search' => run {
             }
         ];
     };
-    test 'select' => run {
+
+    test 'search_by_sql' => run {
         my $sql = q{SELECT user.date, prof.date AS prof_date FROM user, prof WHERE user.id = prof.user_id};
         my @rows = map { +{date => $_->date, prof_date => $_->prof_date} } Skinny->search_by_sql($sql);
         is_deeply \@rows, [
@@ -62,16 +63,8 @@ describe 'basic search' => run {
             }
         ];
     };
-    test 'abstract search' => run {
-        my @rows = map { +{id => $_->id, date => $_->date} } Skinny->search('user', {id => 1},{select => [qw/id date/]});
-        is_deeply \@rows, [
-            {
-                'id'   => 1,
-                'date' => '2008-09-09T00:00:00',
-            },
-        ];
-    };
-    test 'abstract search no as' => run {
+
+    test 'search no select column' => run {
         my @rows = map { +{id => $_->id, name => $_->name, date => $_->date} } Skinny->search('user', {id => 1});
         is_deeply \@rows, [
             {
@@ -81,8 +74,20 @@ describe 'basic search' => run {
             },
         ];
     };
+
+    test 'search select column' => run {
+        my @rows = map { +{id => $_->id, date => $_->date} } Skinny->search('user', {id => 1},{select => [qw/id date/]});
+        is_deeply \@rows, [
+            {
+                'id'   => 1,
+                'date' => '2008-09-09T00:00:00',
+            },
+        ];
+    };
+
     test 'get_column' => run {
-        my @rows = map { +{id => $_->get_column('id'), name => $_->get_column('name'), date => $_->get_column('date')} } Skinny->search('user', {id => 1});
+        my @rows = map { +{id => $_->get_column('id'), name => $_->get_column('name'), date => $_->get_column('date')} }
+                   Skinny->search('user', {id => 1});
         is_deeply \@rows, [
             {
                 id   => 1,
@@ -91,6 +96,7 @@ describe 'basic search' => run {
             },
         ];
     };
+
     test 'limit offset' => run {
         my @rows = map { $_->get_columns } Skinny->search('user', {}, { limit => 1,});
         is_deeply \@rows, [
@@ -142,20 +148,60 @@ describe 'basic search' => run {
         ];
     };
 
-    test 'update select' => run {
-        Skinny->update(user => {name => 'nomanekoQ'},{id => 1});
+    test 'update' => run {
+
         my @rows = map { +{name => $_->name} } Skinny->search_by_sql('SELECT name FROM user where id = ?',1);
+        is_deeply \@rows, [ { name => 'nekokak'} ];
+
+        Skinny->update(user => {name => 'nomanekoQ'},{id => 1});
+
+        @rows = map { +{name => $_->name} } Skinny->search_by_sql('SELECT name FROM user where id = ?',1);
         is_deeply \@rows, [ { name => 'nomanekoQ'} ];
+
+        # cleanup
         Skinny->update(user => {name => 'nekokak'},{id => 1});
     };
-    test 'delete select' => run {
-        Skinny->insert(user => {id => 3, name => 'fooooo', date => '2008-12-31'});
-        my @rows = map { +{name => $_->name} } Skinny->search_by_sql('SELECT name FROM user where id = ?',3);
-        is_deeply \@rows, [ { name => 'fooooo'} ];
-        Skinny->delete(user => {id => 3});
-        @rows = map { +{name => $_->name} } Skinny->search_by_sql('SELECT name FROM user where id = ?',3);
-        is_deeply \@rows, [];
+
+    test 'row update' => run {
+        my $sql = q{SELECT id, name FROM user WHERE id = 1};
+        my @rows = Skinny->search_by_sql($sql);
+        is $rows[0]->name , 'nekokak';
+        $rows[0]->update({name => 'hogehogeQ'});
+
+        @rows = map {+{ id => $_->id, name => $_->name }} Skinny->search_by_sql($sql);
+        is_deeply \@rows, [
+            {
+                id => 1,
+                name => 'hogehogeQ',
+            }
+        ];
+
+        # cleanup
+        @rows = Skinny->search_by_sql($sql);
+        $rows[0]->update({name => 'nekokak'});
     };
+
+    test 'join case' => run {
+        my $sql = q{SELECT user.id FROM user, prof WHERE user.id = prof.user_id AND user.id = 1};
+        my @rows = Skinny->search_by_sql($sql);
+        dies_ok { $rows[0]->update({name => 'croak case'}) };
+    };
+
+    test 'no pk settings' => run {
+        Skinny::User->pk(undef);
+        my $sql = q{SELECT id FROM user WHERE id = 1};
+        my @rows = Skinny->search_by_sql($sql);
+        dies_ok { $rows[0]->update({name => 'croak case'}) };
+        # cleanup
+        Skinny::User->pk('id');
+    };
+
+    test 'no pk in your query' => run {
+        my $sql = q{SELECT name FROM user WHERE id = 1};
+        my @rows = Skinny->search_by_sql($sql);
+        dies_ok { $rows[0]->update({name => 'croak case'}) };
+    };
+
     test 'incremental search' => run {
         my $rs = Skinny->resultset(
             {
@@ -268,6 +314,51 @@ describe 'basic search' => run {
             },
         ];
     };
+
+    test 'delete select' => run {
+
+        Skinny->insert(user => {id => 3, name => 'fooooo', date => '2008-12-31'});
+        my @rows = map { +{name => $_->name} } Skinny->search_by_sql('SELECT name FROM user where id = ?',3);
+        is_deeply \@rows, [ { name => 'fooooo'} ];
+
+        Skinny->delete(user => {id => 3});
+        @rows = map { +{name => $_->name} } Skinny->search_by_sql('SELECT name FROM user where id = ?',3);
+        is_deeply \@rows, [];
+    };
+
+    test 'row delete' => run {
+        Skinny->insert(user => {id => 3, name => 'fooooo', date => '2008-12-31'});
+        my $itr = Skinny->search_by_sql('SELECT id FROM user where id = ?',3);
+        my @rows = map { +{id => $_->id} } $itr->all;
+        is_deeply \@rows, [ { id => 3 } ];
+        $itr->reset;
+        @rows = $itr->all;
+        $rows[0]->delete;
+
+        @rows = map { +{name => $_->name} } Skinny->search_by_sql('SELECT name FROM user where id = ?',3);
+        is_deeply \@rows, [];
+    };
+
+    test 'join case delete' => run {
+        my $sql = q{SELECT user.id FROM user, prof WHERE user.id = prof.user_id AND user.id = 1};
+        my @rows = Skinny->search_by_sql($sql);
+        dies_ok { $rows[0]->delete };
+    };
+
+    test 'no pk settings delete' => run {
+        Skinny::User->pk(undef);
+        my $sql = q{SELECT id FROM user WHERE id = 1};
+        my @rows = Skinny->search_by_sql($sql);
+        dies_ok { $rows[0]->delete };
+        Skinny::User->pk('id');
+    };
+
+    test 'no pk in your query for delete' => run {
+        my $sql = q{SELECT name FROM user WHERE id = 1};
+        my @rows = Skinny->search_by_sql($sql);
+        dies_ok { $rows[0]->delete };
+    };
+
     cleanup {
         Skinny->do(q{DROP TABLE user});
         Skinny->do(q{DROP TABLE prof});
