@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use base 'Class::Accessor::Fast';
 use Carp;
-use Sub::Install qw/install_sub/;
 use Data::Dumper;
 
 __PACKAGE__->mk_accessors(qw/ row_data skinny select_columns sql_structure/);
@@ -19,10 +18,8 @@ sub setup {
     for my $alias (keys %{$self->structure->{column_aliases}}) {
         (my $col = lc $alias) =~ s/.+\.(.+)/$1/o;
         next if $class->can($col);
-        install_sub({
-            code => $self->_razy_inflate_data($col),
-            as   => $col
-        });
+        no strict 'refs'; ## no critic
+        *{"$class\::$col"} = $self->_razy_inflate_data($col);
     }
 
     $self->select_columns([map { $_->display_name } values %{$self->structure->{col_obj}}]);

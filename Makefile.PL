@@ -8,7 +8,6 @@ requires 'Module::Find';
 requires 'Digest::SHA1';
 requires 'Class::Accessor::Fast';
 requires 'DBI';
-requires 'Sub::Install';
 requires 'Class::Trigger';
 requires 'SQL::Parser';
 
