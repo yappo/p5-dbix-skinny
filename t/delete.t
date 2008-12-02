@@ -45,10 +45,10 @@ describe 'basic delete' => run {
         Skinny->insert('user',{id => 1, name => 'nekokak',  date => '2008-09-09'});
     };
     test 'abstract search' => run {
-        my @rows = Skinny->search('user', {id => 1},{as => [qw/id/]});
+        my @rows = Skinny->search('user', {id => 1},{select => [qw/id/]});
         $rows[0]->delete;
 
-        @rows = map { +{id => $_->id, name => $_->name} } Skinny->search('user', {},{as => [qw/id name/]});
+        @rows = map { +{id => $_->id, name => $_->name} } Skinny->search('user', {},{select => [qw/id name/]});
         is_deeply \@rows, [
             {
                 id   => 2,

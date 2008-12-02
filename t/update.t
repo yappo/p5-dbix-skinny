@@ -44,10 +44,10 @@ describe 'basic update' => run {
         ];
     };
     test 'abstract search' => run {
-        my @rows = Skinny->search('user', {id => 1},{as => [qw/id/]});
+        my @rows = Skinny->search('user', {id => 1},{select => [qw/id/]});
         $rows[0]->update({name => 'mogemogeQ'});
 
-        @rows = map { +{id => $_->id, name => $_->name} } Skinny->search('user', {id => 1},{as => [qw/id name/]});
+        @rows = map { +{id => $_->id, name => $_->name} } Skinny->search('user', {id => 1},{select => [qw/id name/]});
         is_deeply \@rows, [
             {
                 id   => 1,
