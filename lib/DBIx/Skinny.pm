@@ -96,6 +96,8 @@ sub insert {
     my $obj = $class->search($table, { $class->_schemas->{$table}->pk => $id } )->first;
 
     $class->call_schema_trigger('post_insert', $table, $obj);
+
+    $obj;
 }
 
 sub update {
