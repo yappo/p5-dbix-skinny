@@ -5,7 +5,6 @@ use warnings;
 our $VERSION = '0.01';
 
 use base qw/Class::Data::Inheritable/;
-use SQL::Abstract::Limit;
 use Module::Find;
 use UNIVERSAL::require;
 use DBI;
@@ -17,7 +16,7 @@ use Digest::SHA1 qw/sha1_hex/;
 
 use Data::Dumper;
 
-__PACKAGE__->mk_classdata($_) for qw/dsn username password _dbh dbd _sql_abstract/;
+__PACKAGE__->mk_classdata($_) for qw/dsn username password _dbh dbd/;
 __PACKAGE__->mk_classdata(_schemas => {} );
 
 sub setup {
@@ -70,13 +69,6 @@ sub do {
     $class->dbh->do($sql);
 }
 
-sub sql_abstract {
-    my $class = shift;
-    $class->_sql_abstract or do {
-        $class->_sql_abstract(SQL::Abstract::Limit->new(limit_dialect => $class->dbh));
-    };
-}
-
 sub call_schema_trigger {
     my ($class, $trigger, $table, $args) = @_;
     $class->_schemas->{$table}->call_trigger($trigger, $args); 
@@ -86,34 +78,72 @@ sub insert {
     my ($class, $table, $args) = @_;
 
     $class->call_schema_trigger('pre_insert', $table, $args);
-    
-    my ($stmt, @bind) = $class->sql_abstract->insert($table, $args);
-    my $sth = $class->_execute($stmt, \@bind);
+
+    my (@cols,@bind);
+    for my $col (keys %{ $args }) {
+        push @cols, $col;
+        push @bind, $args->{$col};
+    }
+
+    # TODO: INSERT or REPLACE. bind_param_attributes etc...
+    my $sql = "INSERT INTO $table\n";
+    $sql .= '(' . join(', ', @cols) . ')' . "\n" .
+            'VALUES (' . join(', ', ('?') x @cols) . ')' . "\n";
+
+    my $sth = $class->_execute($sql, \@bind);
 
     my $id = $class->dbd->last_insert_id($class->dbh, $sth);
     my $obj = $class->search($table, { $class->_schemas->{$table}->pk => $id } )->first;
 
     $class->call_schema_trigger('post_insert', $table, $obj);
 }
+
 sub update {
     my ($class, $table, $args, $where) = @_;
 
     $class->call_schema_trigger('pre_update', $table, $args);
 
-    my ($stmt, @bind) = $class->sql_abstract->update($table, $args, $where);
-    $class->_execute($stmt, \@bind);
+    my (@set,@bind);
+    for my $col (keys %{ $args }) {
+        push @set, "$col = ?";
+        push @bind, $args->{$col};
+    }
+
+    my $stmt = DBIx::Skinny::SQL->new;
+    $class->_add_where($stmt, $where);
+    push @bind, @{ $stmt->bind };
+
+    my $sql = "UPDATE $table SET " . join(', ', @set) . ' ' . $stmt->as_sql_where;
+
+    $class->_execute($sql, \@bind);
 
     $class->call_schema_trigger('post_update', $table, $args);
 }
+
 sub delete {
     my ($class, $table, $where) = @_;
 
     $class->call_schema_trigger('pre_delete', $table, $where);
 
-    my ($stmt, @bind) = $class->sql_abstract->delete($table, $where);
-    $class->_execute($stmt, \@bind);
+    my $stmt = DBIx::Skinny::SQL->new(
+        {
+            from => [$table],
+        }
+    );
+
+    $class->_add_where($stmt, $where);
+
+    my $sql = "DELETE " . $stmt->as_sql;
+    $class->_execute($sql, $stmt->bind);
 
     $class->call_schema_trigger('post_delete', $table);
+}
+
+sub _add_where {
+    my ($class, $stmt, $where) = @_;
+    for my $col (keys %{$where}) {
+        $stmt->add_where($col => $where->{$col});
+    }
 }
 
 sub _setup_sqlstructure {
@@ -125,15 +155,35 @@ sub _setup_sqlstructure {
 sub search {
     my ($class, $table, $where, $opt) = @_;
 
-    my $cols = $opt->{as} || $class->_schemas->{$table}->columns;
-    my $order = $opt->{order_by};
-    my ($limit, $offset) = ($opt->{limit}||0, $opt->{offset}||0);
-    my ($stmt, @bind) = $class->sql_abstract->select($table, $cols, $where, $order, $limit, $offset);
+    my $cols = $opt->{select} || $class->_schemas->{$table}->columns;
+    my $rs = $class->resultset(
+        {
+            select => $cols,
+            from   => [$table],
+        }
+    );
 
-    my $structure = $class->_setup_sqlstructure($stmt);
+    $class->_add_where($rs, $where);
 
-    my $sth = $class->_execute($stmt, \@bind);
-    $class->_get_iterator($sth, $structure);
+    $rs->limit(   $opt->{limit}   ) if $opt->{limit};
+    $rs->offset(  $opt->{offset}  ) if $opt->{offset};
+
+    if (my $terms = $opt->{order_by}) {
+        my @orders;
+        for my $term (@{$terms}) {
+            my ($col, $case) = each %$term;
+            push @orders, { column => $col, desc => $case };
+        }
+        $rs->order(\@orders);
+    }
+
+    if (my $terms = $opt->{having}) {
+        for my $col (keys %$terms) {
+            $rs->add_having($col => $terms->{$col});
+        }
+    }
+
+    $rs->retrieve;
 }
 
 sub search_by_sql {

@@ -63,7 +63,7 @@ describe 'basic search' => run {
         ];
     };
     test 'abstract search' => run {
-        my @rows = map { +{id => $_->id, date => $_->date} } Skinny->search('user', {id => 1},{as => [qw/id date/]});
+        my @rows = map { +{id => $_->id, date => $_->date} } Skinny->search('user', {id => 1},{select => [qw/id date/]});
         is_deeply \@rows, [
             {
                 'id'   => 1,
@@ -112,7 +112,7 @@ describe 'basic search' => run {
     };
 
     test 'order' => run {
-        my @rows = map { $_->get_columns } Skinny->search('user', {}, { order_by => ['id ASC']});
+        my @rows = map { $_->get_columns } Skinny->search('user', {}, { order_by => [{id => 'ASC'}]});
         is_deeply \@rows, [
             {
                 id   => 1,
@@ -127,7 +127,7 @@ describe 'basic search' => run {
 
         ];
 
-        @rows = map { $_->get_columns } Skinny->search('user', {}, { order_by => ['id DESC']});
+        @rows = map { $_->get_columns } Skinny->search('user', {}, { order_by => [{id => 'DESC'}]});
         is_deeply \@rows, [ 
             {
                 id   => 2,

@@ -4,7 +4,6 @@ all_from 'lib/DBIx/Skinny.pm';
 
 requires 'UNIVERSAL::require';
 requires 'Class::Data::Inheritable';
-requires 'SQL::Abstract::Limit';
 requires 'Module::Find';
 requires 'Digest::SHA1';
 requires 'Class::Accessor::Fast';
