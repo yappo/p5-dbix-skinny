@@ -18,3 +18,8 @@ my $t = countit 2 => sub {
 };
 
 print timestr($t), "\n";
+
+__END__
+2008-12-19 21:55
+ 3 wallclock secs ( 2.15 usr +  0.00 sys =  2.15 CPU) @ 24.19/s (n=52)
+
