@@ -7,9 +7,6 @@ requires 'Carp';
 requires 'Digest::SHA1';
 requires 'DBI';
 
-tests 't/*.t';
-author_tests 'xt';
-
 build_requires 'Test::More';
 build_requires 'Test::Declare';
 
