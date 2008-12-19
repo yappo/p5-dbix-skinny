@@ -1,9 +1,9 @@
 package DBIx::Skinny::SQL;
 use strict;
 use warnings;
-use Class::Accessor::Lite;
+use DBIx::Skinny::Accessor;
 
-Class::Accessor::Lite->mk_accessors(
+mk_accessors(
     qw/
         select distinct select_map select_map_reverse
         from joins where bind limit offset group order
@@ -13,9 +13,8 @@ Class::Accessor::Lite->mk_accessors(
     /
 );
 
-sub new {
-    my ($class, $args) = @_;
-    my $self = bless {%{$args||{}}}, $class;
+sub init {
+    my $self = shift;
 
     for my $name (qw/ select from joins bind group order where having /) {
         unless ($self->$name && ref $self->$name eq 'ARRAY') {

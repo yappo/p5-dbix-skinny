@@ -4,59 +4,86 @@ use warnings;
 
 our $VERSION = '0.01';
 
-use base qw/Class::Data::Inheritable/;
-use Module::Find;
 use UNIVERSAL::require;
 use DBI;
 use DBIx::Skinny::Iterator;
-use DBIx::Skinny::SQLStructure;
 use DBIx::Skinny::DBD;
 use DBIx::Skinny::SQL;
+use DBIx::Skinny::Row;
 use Digest::SHA1 qw/sha1_hex/;
+    use Data::Dumper;
 
-use Data::Dumper;
+sub import {
+    my ($class, %opt) = @_;
 
-__PACKAGE__->mk_classdata($_) for qw/dsn username password _dbh dbd/;
-__PACKAGE__->mk_classdata(_schemas => {} );
+    my $caller = caller;
+    my $args   = $opt{setup};
 
-sub setup {
-    my ($class, %args) = @_;
+    my $schema = "$caller\::Schema";
+    $schema->use or die $@;
 
-    for my $accesser ( keys %args ) {
-        $class->$accesser( $args{$accesser} );
+    (my $dbd_type = $args->{dsn}) =~ s/^dbi:(\w*):.*/$1/;
+
+    my $_attribute = +{
+        dsn      => $args->{dsn},
+        username => $args->{username},
+        password => $args->{password},
+        dbh      => '',
+        dbd      => DBIx::Skinny::DBD->new($dbd_type),
+        schema   => $schema,
+    };
+    no strict 'refs';
+    *{"$caller\::attribute"} = sub { $_attribute };
+
+    my @functions = qw/
+        schema
+        dbh _connect
+        call_schema_trigger
+        do resultset search single search_by_sql
+            _get_iterator _mk_row_class
+        insert update delete
+            _add_where
+        _execute _close_sth
+    /;
+    for my $func (@functions) {
+        *{"$caller\::$func"} = \&$func;
     }
 
-    $class->_load_schemas;
-    $class->_setup_dbd;
+    strict->import;
+    warnings->import;
 }
 
-sub _load_schemas {
+sub schema {
     my $class = shift;
-
-    for my $schema (Module::Find::findallmod($class)) {
-        $schema->use or die $@;
-        ## $class  : Proj::Schema
-        ## $schema : Proj::Schema::User
-        ## $table  : User -> user
-        my $table = lc substr $schema, length "${class}::";
-        $class->_schemas->{$table} = $schema;
-    }
+    $class->attribute->{schema};
 }
 
-sub _setup_dbd {
-    my $class = shift;
-    (my $dbd_type = $class->dsn) =~ s/^dbi:(\w*):.*/$1/;
-    $class->dbd(DBIx::Skinny::DBD->new($dbd_type));
-}
-
+#--------------------------------------------------------------------------------
+# db handling
 sub _connect {
     my $class = shift;
-    return $class->_dbh if $class->_dbh;
-
-    $class->_dbh(DBI->connect($class->dsn, $class->username, $class->password));
+    $class->attribute->{dbh} ||= DBI->connect(
+        $class->attribute->{dsn},
+        $class->attribute->{username},
+        $class->attribute->{password},
+    );
+    $class->attribute->{dbh};
 }
 
 sub dbh { shift->_connect }
+
+#--------------------------------------------------------------------------------
+# schema trigger call
+sub call_schema_trigger {
+    my ($class, $trigger, $table, $args) = @_;
+    $class->schema->call_trigger($table, $trigger, $args);
+}
+
+#--------------------------------------------------------------------------------
+sub do {
+    my ($class, $sql) = @_;
+    $class->dbh->do($sql);
+}
 
 sub resultset {
     my ($class, $args) = @_;
@@ -64,100 +91,10 @@ sub resultset {
     DBIx::Skinny::SQL->new($args);
 }
 
-sub do {
-    my ($class, $sql) = @_;
-    $class->dbh->do($sql);
-}
-
-sub call_schema_trigger {
-    my ($class, $trigger, $table, $args) = @_;
-    $class->_schemas->{$table}->call_trigger($trigger, $args); 
-}
-
-sub insert {
-    my ($class, $table, $args) = @_;
-
-    $class->call_schema_trigger('pre_insert', $table, $args);
-
-    my (@cols,@bind);
-    for my $col (keys %{ $args }) {
-        push @cols, $col;
-        push @bind, $args->{$col};
-    }
-
-    # TODO: INSERT or REPLACE. bind_param_attributes etc...
-    my $sql = "INSERT INTO $table\n";
-    $sql .= '(' . join(', ', @cols) . ')' . "\n" .
-            'VALUES (' . join(', ', ('?') x @cols) . ')' . "\n";
-
-    my $sth = $class->_execute($sql, \@bind);
-
-    my $id = $class->dbd->last_insert_id($class->dbh, $sth);
-    my $obj = $class->search($table, { $class->_schemas->{$table}->pk => $id } )->first;
-
-    $class->call_schema_trigger('post_insert', $table, $obj);
-
-    $obj;
-}
-
-sub update {
-    my ($class, $table, $args, $where) = @_;
-
-    $class->call_schema_trigger('pre_update', $table, $args);
-
-    my (@set,@bind);
-    for my $col (keys %{ $args }) {
-        push @set, "$col = ?";
-        push @bind, $args->{$col};
-    }
-
-    my $stmt = DBIx::Skinny::SQL->new;
-    $class->_add_where($stmt, $where);
-    push @bind, @{ $stmt->bind };
-
-    my $sql = "UPDATE $table SET " . join(', ', @set) . ' ' . $stmt->as_sql_where;
-
-    $class->_execute($sql, \@bind);
-
-    $class->call_schema_trigger('post_update', $table, $args);
-}
-
-sub delete {
-    my ($class, $table, $where) = @_;
-
-    $class->call_schema_trigger('pre_delete', $table, $where);
-
-    my $stmt = DBIx::Skinny::SQL->new(
-        {
-            from => [$table],
-        }
-    );
-
-    $class->_add_where($stmt, $where);
-
-    my $sql = "DELETE " . $stmt->as_sql;
-    $class->_execute($sql, $stmt->bind);
-
-    $class->call_schema_trigger('post_delete', $table);
-}
-
-sub _add_where {
-    my ($class, $stmt, $where) = @_;
-    for my $col (keys %{$where}) {
-        $stmt->add_where($col => $where->{$col});
-    }
-}
-
-sub _setup_sqlstructure {
-    my ($class, $stmt) = @_;
-
-    return DBIx::Skinny::SQLStructure->new({stmt => $stmt});
-}
-
 sub search {
     my ($class, $table, $where, $opt) = @_;
 
-    my $cols = $opt->{select} || $class->_schemas->{$table}->columns;
+    my $cols = $opt->{select} || $class->schema->schema_info->{$table}->{columns};
     my $rs = $class->resultset(
         {
             select => $cols,
@@ -188,34 +125,138 @@ sub search {
     $rs->retrieve;
 }
 
+sub single {
+    my ($class, $table, $where, $opt) = @_;
+    $opt->{limit} = 1;
+    $class->search($table, $where, $opt)->first;
+}
+
 sub search_by_sql {
     my ($class, $sql, @bind) = @_;
 
-    my $structure = $class->_setup_sqlstructure($sql);
-
     my $sth = $class->_execute($sql, \@bind);
-    return $class->_get_iterator($sth, $structure);
+    return $class->_get_iterator($sth);
 }
 
 sub _get_iterator {
-    my ($class, $sth, $structure) = @_;
+    my ($class, $sth) = @_;
 
     return DBIx::Skinny::Iterator->new(
-        skinny        => $class,
-        sth           => $sth,
-        sql_structure => $structure,
-        row_class     => $class->_mk_row_class_by_stmt($structure),
+        skinny    => $class,
+        sth       => $sth,
+        row_class => $class->_mk_row_class,
     );
 }
 
-sub _mk_row_class_by_stmt {
-    my ($class, $structure) = @_;
+sub _mk_row_class {
+    my ($class, ) = @_;
 
-    my $row_class = 'DBIx::Skinny::Row::C' . sha1_hex $structure->stmt . $$ . $structure;
+    my $row_class = 'DBIx::Skinny::Row::C' . sha1_hex  $$ . {};
 
-    { no strict 'refs'; @{"$row_class\::ISA"} = ('DBIx::Skinny::Row'); }  ## no critic
+    { no strict 'refs'; @{"$row_class\::ISA"} = ('DBIx::Skinny::Row'); }
 
     return $row_class;
+}
+
+sub insert {
+    my ($class, $table, $args) = @_;
+
+    $class->call_schema_trigger('pre_insert', $table, $args);
+
+    # deflate
+    my $inflate_rules = $class->schema->inflate_rules;
+    for my $rule (keys %{$inflate_rules}) {
+        for my $col (keys %{$args}) {
+            if ($col =~ /$rule/ and my $code = $inflate_rules->{$rule}->{deflate}) {
+                $args->{$col} = $code->($args->{$col});
+            }
+        }
+    }
+
+    my (@cols,@bind);
+    for my $col (keys %{ $args }) {
+        push @cols, $col;
+        push @bind, $class->schema->utf8_off($col, $args->{$col});
+    }
+
+    # TODO: INSERT or REPLACE. bind_param_attributes etc...
+    my $sql = "INSERT INTO $table\n";
+    $sql .= '(' . join(', ', @cols) . ')' . "\n" .
+            'VALUES (' . join(', ', ('?') x @cols) . ')' . "\n";
+
+    my $sth = $class->_execute($sql, \@bind);
+
+    my $id = $class->attribute->{dbd}->last_insert_id($class->dbh, $sth);
+    my $obj = $class->search($table, { $class->schema->schema_info->{$table}->{pk} => $id } )->first;
+
+    $class->call_schema_trigger('post_insert', $table, $obj);
+
+    $obj;
+}
+
+sub update {
+    my ($class, $table, $args, $where) = @_;
+
+    $class->call_schema_trigger('pre_update', $table, $args);
+
+    # deflate
+    my $inflate_rules = $class->schema->inflate_rules;
+    for my $rule (keys %{$inflate_rules}) {
+        for my $col (keys %{$args}) {
+            if ($col =~ /$rule/ and my $code = $inflate_rules->{$rule}->{deflate}) {
+                $args->{$col} = $code->($args->{$col});
+            }
+        }
+    }
+
+    my (@set,@bind);
+    for my $col (keys %{ $args }) {
+        push @set, "$col = ?";
+        push @bind, $class->schema->utf8_off($col, $args->{$col});
+    }
+
+    my $stmt = $class->resultset;
+    $class->_add_where($stmt, $where);
+    push @bind, @{ $stmt->bind };
+
+    my $sql = "UPDATE $table SET " . join(', ', @set) . ' ' . $stmt->as_sql_where;
+
+    $class->_execute($sql, \@bind);
+
+    $class->call_schema_trigger('post_update', $table, $args);
+
+    for my $col (@{$class->schema->schema_info->{$table}->{columns}}) {
+        $stmt->add_select($col);
+    }
+    $stmt->from([$table]);
+    my $row = $stmt->retrieve->first;
+    return $row;
+}
+
+sub delete {
+    my ($class, $table, $where) = @_;
+
+    $class->call_schema_trigger('pre_delete', $table, $where);
+
+    my $stmt = $class->resultset(
+        {
+            from   => [$table],
+        }
+    );
+
+    $class->_add_where($stmt, $where);
+
+    my $sql = "DELETE " . $stmt->as_sql;
+    $class->_execute($sql, $stmt->bind);
+
+    $class->call_schema_trigger('post_delete', $table);
+}
+
+sub _add_where {
+    my ($class, $stmt, $where) = @_;
+    for my $col (keys %{$where}) {
+        $stmt->add_where($col => $where->{$col});
+    }
 }
 
 sub _execute {

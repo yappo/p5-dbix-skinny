@@ -1,7 +1,6 @@
 package DBIx::Skinny::Iterator;
 use strict;
 use warnings;
-use DBIx::Skinny::Row;
 
 sub new {
     my ($class, %args) = @_;
@@ -30,9 +29,8 @@ sub iterator {
 
     my $obj = $self->{row_class}->new(
         {
-            row_data      => $row,
-            skinny        => $self->{skinny},
-            sql_structure => $self->{sql_structure},
+            row_data => $row,
+            skinny   => $self->{skinny},
         }
     );
     $obj->setup;
@@ -49,10 +47,7 @@ sub first {
     $self->next;
 }
 
-sub next {
-    my $self = shift;
-    $self->iterator;
-}
+sub next { shift->iterator }
 
 sub all {
     my $self = shift;
