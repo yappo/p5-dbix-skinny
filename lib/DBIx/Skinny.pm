@@ -39,9 +39,9 @@ sub import {
         schema
         dbh _connect
         call_schema_trigger
-        do resultset search single search_by_sql
+        do resultset search single search_by_sql count
             _get_iterator _mk_row_class
-        insert update delete
+        insert update delete find_or_create
             _add_where
         _execute _close_sth
     /;
@@ -83,6 +83,22 @@ sub call_schema_trigger {
 sub do {
     my ($class, $sql) = @_;
     $class->dbh->do($sql);
+}
+
+sub count {
+    my ($class, $table, $args, $where) = @_;
+
+    my $rs = $class->resultset(
+        {
+            from   => [$table],
+        }
+    );
+
+    my ($column, $alias) = each %$args;
+    $rs->add_select("COUNT($column)" =>  $alias);
+    $class->_add_where($rs, $where);
+
+    $rs->retrieve->first;
 }
 
 sub resultset {
@@ -250,6 +266,14 @@ sub delete {
     $class->_execute($sql, $stmt->bind);
 
     $class->call_schema_trigger('post_delete', $table);
+}
+
+sub find_or_create {
+    my ($class, $table, $args) = @_;
+    my $row = $class->single($table, $args);
+    return $row if $row;
+    $row = $class->insert($table, $args);
+    return $row;
 }
 
 sub _add_where {
