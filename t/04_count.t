@@ -17,17 +17,17 @@ describe 'basic test' => run {
             id   => 1,
             name => 'perl',
         });
-        my $row = Mock->count('tag' => {id => 'count'});
+        my $row = Mock->count('tag' => {count => 'id'});
         is $row->count, 1;
 
         Mock->insert('tag',{
             id   => 2,
             name => 'ruby',
         });
-        $row = Mock->count('tag' => {id => 'count'});
+        $row = Mock->count('tag' => {count => 'id'});
         is $row->count, 2;
 
-        $row = Mock->count('tag' => {id => 'count'},{name => 'perl'});
+        $row = Mock->count('tag' => {count => 'id'},{name => 'perl'});
         is $row->count, 1;
     };
 };

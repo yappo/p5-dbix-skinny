@@ -94,7 +94,7 @@ sub count {
         }
     );
 
-    my ($column, $alias) = each %$args;
+    my ($alias, $column) = each %$args;
     $rs->add_select("COUNT($column)" =>  $alias);
     $class->_add_where($rs, $where);
 
