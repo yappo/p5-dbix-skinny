@@ -1,10 +1,9 @@
 use strict;
 use warnings;
+use utf8;
 use Test::Declare;
 use lib './t';
-use utf8;
 use Mock;
-use DateTime;
 
 plan tests => blocks;
 

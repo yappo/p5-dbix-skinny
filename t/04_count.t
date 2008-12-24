@@ -1,8 +1,8 @@
 use strict;
 use warnings;
+use utf8;
 use Test::Declare;
 use lib './t';
-use utf8;
 use Mock;
 
 plan tests => blocks;
