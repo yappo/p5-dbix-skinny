@@ -11,7 +11,6 @@ use DBIx::Skinny::DBD;
 use DBIx::Skinny::SQL;
 use DBIx::Skinny::Row;
 use Digest::SHA1 qw/sha1_hex/;
-    use Data::Dumper;
 
 sub import {
     my ($class, %opt) = @_;

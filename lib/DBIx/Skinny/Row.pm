@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use DBIx::Skinny::Accessor;
 use Carp;
-use Data::Dumper;
 
 mk_accessors(qw/ row_data skinny select_columns /);
 
