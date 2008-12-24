@@ -19,6 +19,12 @@ sub setup_test_db {
             name TEXT
         )
     });
+    $class->do(q{
+        CREATE TABLE mock_trigger_post_delete (
+            id   INT,
+            name TEXT
+        )
+    });
 }
 
 1;

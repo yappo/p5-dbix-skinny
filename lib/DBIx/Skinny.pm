@@ -76,7 +76,7 @@ sub dbh { shift->_connect }
 # schema trigger call
 sub call_schema_trigger {
     my ($class, $trigger, $table, $args) = @_;
-    $class->schema->call_trigger($table, $trigger, $args);
+    $class->schema->call_trigger($class, $table, $trigger, $args);
 }
 
 #--------------------------------------------------------------------------------

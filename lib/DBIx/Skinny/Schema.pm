@@ -81,11 +81,11 @@ sub trigger ($$) {
 }
 
 sub call_trigger {
-    my ($class, $table, $trigger_name, $args) = @_;
+    my ($class, $skinny, $table, $trigger_name, $args) = @_;
 
     my $trigger_code = $class->schema_info->{$table}->{trigger}->{$trigger_name};
     return unless $trigger_code;
-    $trigger_code->($args);
+    $trigger_code->($skinny, $args);
 }
 
 sub install_inflate_rule ($$) {
