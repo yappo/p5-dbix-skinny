@@ -3,18 +3,18 @@ use strict;
 use warnings;
 use Benchmark qw/countit timethese timeit timestr/;
 use lib qw{../lib/ ../t/};
-use Mock;
+use Mock::Basic;
 
-Mock->setup_test_db;
+Mock::Basic->setup_test_db;
 for my $i (1..1000) {
-    Mock->insert('tag',{
+    Mock::Basic->insert('mock_basic',{
         id   => $i,
         name => 'perl',
     });
 }
 
 my $t = countit 2 => sub {
-    Mock->search('tag')->all
+    Mock::Basic->search('mock_basic')->all
 };
 
 print timestr($t), "\n";
@@ -22,4 +22,5 @@ print timestr($t), "\n";
 __END__
 2008-12-19 21:55
  3 wallclock secs ( 2.15 usr +  0.00 sys =  2.15 CPU) @ 24.19/s (n=52)
-
+2008-12-25 01:17
+ 2 wallclock secs ( 2.01 usr +  0.01 sys =  2.02 CPU) @ 29.21/s (n=59)
