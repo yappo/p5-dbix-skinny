@@ -239,13 +239,14 @@ sub update {
 
     $class->_execute($sql, \@bind);
 
-    $class->call_schema_trigger('post_update', $table, $args);
-
     for my $col (@{$class->schema->schema_info->{$table}->{columns}}) {
         $stmt->add_select($col);
     }
     $stmt->from([$table]);
     my $row = $stmt->retrieve->first;
+
+    $class->call_schema_trigger('post_update', $table, $row);
+
     return $row;
 }
 

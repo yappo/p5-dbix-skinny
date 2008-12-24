@@ -2,30 +2,31 @@ use strict;
 use warnings;
 use utf8;
 use Test::Declare;
+
 use lib './t';
-use Mock;
+use Mock::Basic;
 
 plan tests => blocks;
 
-describe 'basic test' => run {
+describe 'find_or_create test' => run {
     init {
-        Mock->setup_test_db;
+        Mock::Basic->setup_test_db;
     };
 
     test 'find_or_create' => run {
-        my $tag = Mock->find_or_create('tag',{
+        my $mock_basic = Mock::Basic->find_or_create('mock_basic',{
             id   => 1,
             name => 'perl',
         });
-        is $tag->name, 'perl';
+        is $mock_basic->name, 'perl';
 
-        $tag = Mock->find_or_create('tag',{
+        $mock_basic = Mock::Basic->find_or_create('mock_basic',{
             id   => 1,
             name => 'perl',
         });
-        is $tag->name, 'perl';
+        is $mock_basic->name, 'perl';
 
-        my @rows = Mock->search('tag')->all;
+        my @rows = Mock::Basic->search('mock_basic')->all;
         is scalar(@rows), 1;
     };
 };
