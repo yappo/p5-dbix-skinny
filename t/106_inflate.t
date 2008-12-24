@@ -14,22 +14,6 @@ describe 'inflate/deflate test' => run {
         Mock::Inflate->setup_test_db;
     };
 
-    test 'schema info' => run {
-        is +Mock::Inflate->schema, 'Mock::Inflate::Schema';
-
-        my $info = Mock::Inflate->schema->schema_info;
-        is_deeply $info,{
-            mock_inflate => {
-                pk      => 'id',
-                columns => [
-                    'id',
-                    'name',
-                ],
-            }
-        };
-        isa_ok +Mock::Inflate->dbh, 'DBI::db';
-    };
-
     test 'insert mock_inflate data' => run {
         my $name = Mock::Inflate::Name->new(name => 'perl');
 

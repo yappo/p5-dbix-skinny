@@ -13,22 +13,6 @@ describe 'utf8 test' => run {
         Mock::UTF8->setup_test_db;
     };
 
-    test 'schema info' => run {
-        is +Mock::UTF8->schema, 'Mock::UTF8::Schema';
-
-        my $info = Mock::UTF8->schema->schema_info;
-        is_deeply $info,{
-            mock_utf8 => {
-                pk      => 'id',
-                columns => [
-                    'id',
-                    'name',
-                ],
-            }
-        };
-        isa_ok +Mock::UTF8->dbh, 'DBI::db';
-    };
-
     test 'insert mock_utf8 data' => run {
         my $row = Mock::UTF8->insert('mock_utf8',{
             id   => 1,

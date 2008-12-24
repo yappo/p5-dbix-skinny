@@ -26,8 +26,23 @@ describe 'find_or_create test' => run {
         });
         is $mock_basic->name, 'perl';
 
-        my @rows = Mock::Basic->search('mock_basic')->all;
-        is scalar(@rows), 1;
+        is +Mock::Basic->count('mock_basic',{count => 'id'},{name => 'perl'})->count, 1;
+    };
+
+    test 'find_or_insert' => run {
+        my $mock_basic = Mock::Basic->find_or_insert('mock_basic',{
+            id   => 2,
+            name => 'ruby',
+        });
+        is $mock_basic->name, 'ruby';
+
+        $mock_basic = Mock::Basic->find_or_insert('mock_basic',{
+            id   => 2,
+            name => 'ruby',
+        });
+        is $mock_basic->name, 'ruby';
+
+        is +Mock::Basic->count('mock_basic',{count => 'id'},{name => 'ruby'})->count, 1;
     };
 };
 

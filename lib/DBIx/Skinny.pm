@@ -40,7 +40,7 @@ sub import {
         call_schema_trigger
         do resultset search single search_by_sql count
             _get_iterator _mk_row_class
-        insert update delete find_or_create
+        insert create update delete find_or_create find_or_insert
             _add_where
         _execute _close_sth
     /;
@@ -173,6 +173,7 @@ sub _mk_row_class {
     return $row_class;
 }
 
+*create = \*insert;
 sub insert {
     my ($class, $table, $args) = @_;
 
@@ -267,6 +268,8 @@ sub delete {
 
     $class->call_schema_trigger('post_delete', $table);
 }
+
+*find_or_insert = \*find_or_create;
 
 sub find_or_create {
     my ($class, $table, $args) = @_;

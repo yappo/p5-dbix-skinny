@@ -13,13 +13,15 @@ describe 'count test' => run {
         Mock::Basic->setup_test_db;
     };
 
-    test 'find_or_create' => run {
+    test 'count' => run {
         Mock::Basic->insert('mock_basic',{
             id   => 1,
             name => 'perl',
         });
         my $row = Mock::Basic->count('mock_basic' => {count => 'id'});
         is $row->count, 1;
+        $row = Mock::Basic->count('mock_basic' => {cnt => 'id'});
+        is $row->cnt, 1;
 
         Mock::Basic->insert('mock_basic',{
             id   => 2,
