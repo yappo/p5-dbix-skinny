@@ -26,7 +26,6 @@ describe 'utf8 test' => run {
                 ],
             }
         };
-        # XXX: utf8_columns
         isa_ok +Mock::UTF8->dbh, 'DBI::db';
     };
 

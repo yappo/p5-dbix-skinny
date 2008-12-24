@@ -27,7 +27,6 @@ describe 'inflate/deflate test' => run {
                 ],
             }
         };
-        ## TODO: inflate info
         isa_ok +Mock::Inflate->dbh, 'DBI::db';
     };
 
