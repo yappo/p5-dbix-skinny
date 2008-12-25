@@ -18,20 +18,21 @@ describe 'count test' => run {
             id   => 1,
             name => 'perl',
         });
-        my $row = Mock::Basic->count('mock_basic' => {count => 'id'});
-        is $row->count, 1;
-        $row = Mock::Basic->count('mock_basic' => {cnt => 'id'});
-        is $row->cnt, 1;
+
+        is +Mock::Basic->count('mock_basic' => {count => 'id'})->count, 1;
+        is +Mock::Basic->count('mock_basic' => {cnt => 'id'})->cnt, 1;
 
         Mock::Basic->insert('mock_basic',{
             id   => 2,
             name => 'ruby',
         });
-        $row = Mock::Basic->count('mock_basic' => {count => 'id'});
-        is $row->count, 2;
 
-        $row = Mock::Basic->count('mock_basic' => {count => 'id'},{name => 'perl'});
-        is $row->count, 1;
+        is +Mock::Basic->count('mock_basic' => {count => 'id'})->count, 2;
+        is +Mock::Basic->count('mock_basic' => {count => 'id'},{name => 'perl'})->count, 1;
+    };
+
+    test 'iterator count' => run {
+        is +Mock::Basic->search('mock_basic',{  })->count, 2;
     };
 };
 

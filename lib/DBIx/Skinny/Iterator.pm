@@ -64,5 +64,11 @@ sub reset {
     return $self;
 }
 
+sub count {
+    my $self = shift;
+    my @rows = $self->reset->all;
+    scalar @rows;
+}
+
 1;
 
