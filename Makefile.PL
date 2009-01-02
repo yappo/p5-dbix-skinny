@@ -4,7 +4,6 @@ all_from 'lib/DBIx/Skinny.pm';
 
 requires 'UNIVERSAL::require';
 requires 'Carp';
-requires 'Digest::SHA1';
 requires 'DBI';
 
 build_requires 'Test::More';

@@ -10,7 +10,6 @@ use DBIx::Skinny::Iterator;
 use DBIx::Skinny::DBD;
 use DBIx::Skinny::SQL;
 use DBIx::Skinny::Row;
-use Digest::SHA1 qw/sha1_hex/;
 
 sub import {
     my ($class, %opt) = @_;
@@ -150,24 +149,26 @@ sub search_by_sql {
     my ($class, $sql, @bind) = @_;
 
     my $sth = $class->_execute($sql, \@bind);
-    return $class->_get_iterator($sth);
+    return $class->_get_iterator($sql, $sth);
 }
 
 sub _get_iterator {
-    my ($class, $sth) = @_;
+    my ($class, $sql, $sth) = @_;
 
     return DBIx::Skinny::Iterator->new(
         skinny    => $class,
         sth       => $sth,
-        row_class => $class->_mk_row_class,
+        row_class => $class->_mk_row_class($sql),
     );
 }
 
 sub _mk_row_class {
-    my ($class, ) = @_;
+    my ($class, $sql) = @_;
 
-    my $row_class = 'DBIx::Skinny::Row::C' . sha1_hex  $$ . {};
-
+    my $row_class = 'DBIx::Skinny::Row::C';
+    for my $i (0..(int(length($sql) / 8))) {
+        $row_class .= crypt(substr($sql,($i*8),8), 'mk');
+    }
     { no strict 'refs'; @{"$row_class\::ISA"} = ('DBIx::Skinny::Row'); }
 
     return $row_class;
