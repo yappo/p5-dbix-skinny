@@ -303,3 +303,166 @@ sub _close_sth {
 
 1;
 
+__END__
+=head1 NAME
+
+DBIx::Skinny - simple DBI wrapper/ORMapper
+
+=head1 SYNOPSIS
+
+    package Your::Model;
+    use DBIx::Skinny setup => +{
+        dsn => 'dbi:SQLite:',
+        username => '',
+        password => '',
+    }
+    1;
+    
+    package Your::Model::Schema;
+    use DBIx::Skinny::Schema;
+    
+    install_table user => schema {
+        pk 'id';
+        columns qw/
+            id
+            name
+        /;
+    };
+    1;
+    
+    # in your script:
+    use Your::Model;
+    
+    # insert    
+    my $row = Your::Model->insert('user',
+        {
+            id   => 1,
+        }
+    );
+    $row->update('user',{name => 'nekokak'});
+
+    $row = Your::Model->search_by_sql(q{SELECT id, name FROM user WHERE id = ?},1);
+    $row->delete('user')
+
+=head1 DESCRIPTION
+
+DBIx::Skinny is simple DBI wrapper and simple O/R Mapper.
+
+=head1 METHOD
+
+=head2 insert
+
+insert record
+
+    my $row = Your::Model->insert('user',{
+        id   => 1,
+        name => 'nekokak',
+    });
+
+=head2 create
+
+insert method alias.
+
+=head2 update
+
+update record
+
+    Your::Model->update('user',{
+        name => 'nomaneko',
+    },{ id => 1 });
+
+=head2 delete
+
+delete record
+
+    Your::Model->delete('user',{
+        id => 1,
+    });
+
+=head2 find_or_create
+
+create record if not exsists record
+
+    my $row = Your::Model->find_or_create('usr',{
+        id   => 1,
+        name => 'nekokak',
+    });
+
+=head2 find_or_insert
+
+find_or_create method alias.
+
+=head2 search
+
+simple search method.
+
+get iterator:
+
+    my $itr = Your::Model->search('user',{id => 1},{order_by => 'id'});
+
+get rows:
+
+    my @rows = Your::Model->search('user',{id => 1},{order_by => 'id'});
+
+=head2 single
+
+get one record
+
+    my $row = Your::Model->single('user',{id =>1});
+
+=head2 resultset
+
+result set case:
+
+    my $rs = Your::Model->resultset(
+        select => [qw/id name/],
+        from   => [qw/user/],
+    );
+    $rs->add_where('name' => {op => 'like', value => "%neko%"});
+    $rs->limit(10);
+    $rs->offset(10);
+    $rs->order({ column => 'id', desc => 'DESC' });
+    my $itr = $rs->retrieve;
+
+=head2 count
+
+get simple count
+
+    my $cnt = Your::Model->count('user',{count => 'id'})->count;
+
+=head2 search_by_sql
+
+execute your SQL
+
+    my $itr = Your::Model->search_by_sql(q{
+        SELECT
+            id, name
+        FROM
+            user
+        WHERE
+            id = ?
+    },1);
+
+=head2 do
+
+execute your query.
+
+=head2 dbh
+
+get database handle.
+
+=head1 BUGS AND LIMITATIONS
+
+No bugs have been reported.
+
+=head1 AUTHOR
+
+Atsushi Kobayashi  C<< <nekokak __at__ gmail.com> >>
+
+=head1 LICENCE AND COPYRIGHT
+
+Copyright (c) 2009, Atsushi Kobayashi C<< <nekokak __at__ gmail.com> >>. All rights reserved.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself. See L<perlartistic>.
+
