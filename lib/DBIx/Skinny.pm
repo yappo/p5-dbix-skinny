@@ -20,41 +20,48 @@ sub import {
     eval "use $schema"; ## no critic
     die $@ if $@;
 
-    (my $dbd_type = $args->{dsn}) =~ s/^dbi:(\w*):.*/$1/;
+    my $dbd_type;
+    if ($args->{dbh}) {
+        my %drivers = DBI->installed_drivers();
+        ($dbd_type, ) = each %drivers;
+    } else {
+        ($dbd_type = $args->{dsn}) =~ s/^dbi:(\w*):.*/$1/;
+    }
 
     my $_attribute = +{
-        dsn      => $args->{dsn},
-        username => $args->{username},
-        password => $args->{password},
-        dbh      => '',
-        dbd      => DBIx::Skinny::DBD->new($dbd_type),
-        schema   => $schema,
+        dsn             => $args->{dsn},
+        username        => $args->{username},
+        password        => $args->{password},
+        connect_options => $args->{connect_options},
+        dbh             => $args->{dbh}||'',
+        dbd             => DBIx::Skinny::DBD->new($dbd_type),
+        schema          => $schema,
     };
-    no strict 'refs';
-    *{"$caller\::attribute"} = sub { $_attribute };
 
-    my @functions = qw/
-        schema
-        dbh _connect
-        call_schema_trigger
-        do resultset search single search_by_sql count
-            _get_iterator _mk_row_class
-        insert create update delete find_or_create find_or_insert
-            _add_where
-        _execute _close_sth
-    /;
-    for my $func (@functions) {
-        *{"$caller\::$func"} = \&$func;
+    {
+        no strict 'refs';
+        *{"$caller\::attribute"} = sub { $_attribute };
+
+        my @functions = qw/
+            schema
+            dbh _connect
+            call_schema_trigger
+            do resultset search single search_by_sql count
+                _get_iterator _mk_row_class
+            insert create update delete find_or_create find_or_insert
+                _add_where
+            _execute _close_sth
+        /;
+        for my $func (@functions) {
+            *{"$caller\::$func"} = \&$func;
+        }
     }
 
     strict->import;
     warnings->import;
 }
 
-sub schema {
-    my $class = shift;
-    $class->attribute->{schema};
-}
+sub schema { shift->attribute->{schema} }
 
 #--------------------------------------------------------------------------------
 # db handling
@@ -64,6 +71,7 @@ sub _connect {
         $class->attribute->{dsn},
         $class->attribute->{username},
         $class->attribute->{password},
+        { RaiseError => 1, PrintError => 0, AutoCommit => 1, %{ $class->attribute->{connect_options} || {} } }
     );
     $class->attribute->{dbh};
 }
