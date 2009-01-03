@@ -17,8 +17,8 @@ sub import {
         install_table
           schema pk columns schema_info
         install_inflate_rule
-          inflate deflate
-          callback
+          inflate deflate call_inflate call_deflate
+          callback _do_inflate
         trigger call_trigger
         install_utf8_columns
           is_utf8_column utf8_on utf8_off
@@ -113,6 +113,30 @@ sub deflate (&) {
     $class->inflate_rules->{
         $class->inflate_rules->{_installing_rule}
     }->{deflate} = $code;
+}
+
+sub call_inflate {
+    my $class = shift;
+
+    return $class->_do_inflate('inflate', @_);
+}
+
+sub call_deflate {
+    my $class = shift;
+
+    return $class->_do_inflate('deflate', @_);
+}
+
+sub _do_inflate {
+    my ($class, $key, $col, $data) = @_;
+
+    my $inflate_rules = $class->inflate_rules;
+    for my $rule (keys %{$inflate_rules}) {
+        if ($col =~ /$rule/ and my $code = $inflate_rules->{$rule}->{$key}) {
+            $data = $code->($data);
+        }
+    }
+    return $data;
 }
 
 sub callback (&) { shift }

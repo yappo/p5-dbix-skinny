@@ -181,13 +181,8 @@ sub insert {
     $class->call_schema_trigger('pre_insert', $table, $args);
 
     # deflate
-    my $inflate_rules = $class->schema->inflate_rules;
-    for my $rule (keys %{$inflate_rules}) {
-        for my $col (keys %{$args}) {
-            if ($col =~ /$rule/ and my $code = $inflate_rules->{$rule}->{deflate}) {
-                $args->{$col} = $code->($args->{$col});
-            }
-        }
+    for my $col (keys %{$args}) {
+        $args->{$col} = $class->schema->call_deflate($col, $args->{$col});
     }
 
     my (@cols,@bind);
@@ -217,13 +212,8 @@ sub update {
     $class->call_schema_trigger('pre_update', $table, $args);
 
     # deflate
-    my $inflate_rules = $class->schema->inflate_rules;
-    for my $rule (keys %{$inflate_rules}) {
-        for my $col (keys %{$args}) {
-            if ($col =~ /$rule/ and my $code = $inflate_rules->{$rule}->{deflate}) {
-                $args->{$col} = $code->($args->{$col});
-            }
-        }
+    for my $col (keys %{$args}) {
+        $args->{$col} = $class->schema->call_deflate($col, $args->{$col});
     }
 
     my (@set,@bind);

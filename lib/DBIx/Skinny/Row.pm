@@ -25,16 +25,9 @@ sub _razy_get_data {
 
     return sub {
         my $self = shift;
-        my $data = $self->get_column($col);
 
-        # inflate
-        my $inflate_rules = $self->skinny->schema->inflate_rules;
-        for my $rule (keys %{$inflate_rules}) {
-            if ($col =~ /$rule/ and my $code = $inflate_rules->{$rule}->{inflate}) {
-                $data = $code->($data);
-            }
-        }
-        return $data;
+        my $data = $self->get_column($col);
+        $self->skinny->schema->call_inflate($col, $data);
     };
 }
 
