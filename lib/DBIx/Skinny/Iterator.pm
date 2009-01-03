@@ -33,7 +33,11 @@ sub iterator {
             skinny   => $self->{skinny},
         }
     );
-    $obj->setup;
+
+    unless ($self->{_setup}) {
+        $obj->setup;
+        $self->{_setup}=1;
+    }
 
     $self->{_rows_cache}->[$potition] = $obj;
     $self->{_potition} = $potition;
