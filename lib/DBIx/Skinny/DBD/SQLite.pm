@@ -5,7 +5,7 @@ use warnings;
 sub last_insert_id { $_[1]->func('last_insert_rowid') }
 
 sub bulk_insert {
-    my ($class, $skinny, $table, $args) = @_;
+    my ($skinny, $table, $args) = @_;
 
     $skinny->dbh->begin_work;
 

@@ -217,7 +217,8 @@ sub insert {
 sub bulk_insert {
     my ($class, $table, $args) = @_;
 
-    $class->attribute->{dbd}->bulk_insert($class, $table, $args);
+    my $code = $class->attribute->{dbd}->can('bulk_insert') or die "dbd don't provide bulk_insert method";
+    $code->($class, $table, $args);
 }
 
 sub update {
