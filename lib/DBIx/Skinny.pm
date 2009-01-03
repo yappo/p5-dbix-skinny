@@ -4,7 +4,6 @@ use warnings;
 
 our $VERSION = '0.01';
 
-use UNIVERSAL::require;
 use DBI;
 use DBIx::Skinny::Iterator;
 use DBIx::Skinny::DBD;
@@ -18,7 +17,8 @@ sub import {
     my $args   = $opt{setup};
 
     my $schema = "$caller\::Schema";
-    $schema->use or die $@;
+    eval "use $schema"; ## no critic
+    die $@ if $@;
 
     (my $dbd_type = $args->{dsn}) =~ s/^dbi:(\w*):.*/$1/;
 
