@@ -48,7 +48,7 @@ sub import {
             call_schema_trigger
             do resultset search single search_by_sql count
                 _get_iterator _mk_row_class
-            insert create update delete find_or_create find_or_insert
+            insert bulk_insert create update delete find_or_create find_or_insert
                 _add_where
             _execute _close_sth
         /;
@@ -212,6 +212,12 @@ sub insert {
     $class->call_schema_trigger('post_insert', $table, $obj);
 
     $obj;
+}
+
+sub bulk_insert {
+    my ($class, $table, $args) = @_;
+
+    $class->attribute->{dbd}->bulk_insert($class, $table, $args);
 }
 
 sub update {
