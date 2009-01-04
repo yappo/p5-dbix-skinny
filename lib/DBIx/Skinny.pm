@@ -24,7 +24,7 @@ sub import {
     if ($args->{dbh}) {
         $dbd_type = $args->{dbh}->{Driver}->{Name};
     } else {
-        ($dbd_type = $args->{dsn}) =~ s/^dbi:(\w*):.*/$1/;
+        (undef, $dbd_type,) = DBI->parse_dsn($args->{dsn}) or die "can't parse DSN";
     }
 
     my $_attribute = +{
