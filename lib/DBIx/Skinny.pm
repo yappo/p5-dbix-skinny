@@ -9,6 +9,7 @@ use DBIx::Skinny::Iterator;
 use DBIx::Skinny::DBD;
 use DBIx::Skinny::SQL;
 use DBIx::Skinny::Row;
+use DBIx::Skinny::Profiler;
 
 sub import {
     my ($class, %opt) = @_;
@@ -35,6 +36,7 @@ sub import {
         dbh             => $args->{dbh}||'',
         dbd             => DBIx::Skinny::DBD->new($dbd_type),
         schema          => $schema,
+        profiler        => DBIx::Skinny::Profiler->new,
     };
 
     {
@@ -42,7 +44,7 @@ sub import {
         *{"$caller\::attribute"} = sub { $_attribute };
 
         my @functions = qw/
-            schema
+            schema profiler
             dbh _connect
             call_schema_trigger
             do resultset search single search_by_sql count
@@ -61,6 +63,7 @@ sub import {
 }
 
 sub schema { shift->attribute->{schema} }
+sub profiler { shift->attribute->{profiler} }
 
 #--------------------------------------------------------------------------------
 # db handling
@@ -155,6 +158,7 @@ sub single {
 sub search_by_sql {
     my ($class, $sql, @bind) = @_;
 
+    $class->profiler->record_query($sql);
     my $sth = $class->_execute($sql, \@bind);
     return $class->_get_iterator($sql, $sth);
 }
@@ -203,6 +207,7 @@ sub insert {
     $sql .= '(' . join(', ', @cols) . ')' . "\n" .
             'VALUES (' . join(', ', ('?') x @cols) . ')' . "\n";
 
+    $class->profiler->record_query($sql);
     my $sth = $class->_execute($sql, \@bind);
 
     my $id = $class->attribute->{dbd}->last_insert_id($class->dbh, $sth);
@@ -242,6 +247,7 @@ sub update {
 
     my $sql = "UPDATE $table SET " . join(', ', @set) . ' ' . $stmt->as_sql_where;
 
+    $class->profiler->record_query($sql);
     $class->_execute($sql, \@bind);
 
     for my $col (@{$class->schema->schema_info->{$table}->{columns}}) {
@@ -269,6 +275,7 @@ sub delete {
     $class->_add_where($stmt, $where);
 
     my $sql = "DELETE " . $stmt->as_sql;
+    $class->profiler->record_query($sql);
     $class->_execute($sql, $stmt->bind);
 
     $class->call_schema_trigger('post_delete', $table);
