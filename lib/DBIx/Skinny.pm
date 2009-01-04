@@ -22,8 +22,7 @@ sub import {
 
     my $dbd_type;
     if ($args->{dbh}) {
-        my %drivers = DBI->installed_drivers();
-        ($dbd_type, ) = each %drivers;
+        $dbd_type = $args->{dbh}->{Driver}->{Name};
     } else {
         ($dbd_type = $args->{dsn}) =~ s/^dbi:(\w*):.*/$1/;
     }
