@@ -20,6 +20,7 @@ sub _normalize {
     $sql =~ s/^\s*//;
     $sql =~ s/\s*$//;
     $sql =~ s/[\r\n]/ /g;
+    $sql =~ s/\s+/ /g;
     return $sql;
 }
 

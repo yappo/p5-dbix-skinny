@@ -25,12 +25,12 @@ describe 'profiler test' => run {
                 id, name
             FROM
                 user
-            WHETE
+            WHERE
                 name like "%neko%"
         });
         is_deeply $profiler->query_log, [
             q{SELECT * FROM user},
-            q{SELECT                 id, name             FROM                 user             WHETE                 name like "%neko%"},
+            q{SELECT id, name FROM user WHERE name like "%neko%"},
         ];
     };
 
