@@ -29,8 +29,9 @@ sub iterator {
 
     my $obj = $self->{row_class}->new(
         {
-            row_data => $row,
-            skinny   => $self->{skinny},
+            row_data       => $row,
+            skinny         => $self->{skinny},
+            opt_table_info => $self->{opt_table_info},
         }
     );
 

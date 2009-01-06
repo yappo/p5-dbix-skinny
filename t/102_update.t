@@ -28,7 +28,7 @@ describe 'update test' => run {
         my $row = Mock::Basic->single('mock_basic',{id => 1});
         is $row->name, 'python';
 
-        $row = $row->update('mock_basic',{name => 'perl'});
+        $row = $row->update({name => 'perl'});
         is $row->name, 'perl';
     };
 };

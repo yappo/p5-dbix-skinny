@@ -33,7 +33,7 @@ describe 'delete test' => run {
 
         is +Mock::Basic->count('mock_basic',{count => 'id'})->count, 1;
 
-        my $row = Mock::Basic->single('mock_basic',{id => 1})->delete('mock_basic',{id => 1});
+        my $row = Mock::Basic->single('mock_basic',{id => 1})->delete;
 
         is +Mock::Basic->count('mock_basic',{count => 'id'})->count, 0;
     };

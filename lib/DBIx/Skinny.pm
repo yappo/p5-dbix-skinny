@@ -156,20 +156,21 @@ sub single {
 }
 
 sub search_by_sql {
-    my ($class, $sql, @bind) = @_;
+    my ($class, $sql, $bind, $opt_table_info) = @_;
 
     $class->profiler->record_query($sql);
-    my $sth = $class->_execute($sql, \@bind);
-    return $class->_get_iterator($sql, $sth);
+    my $sth = $class->_execute($sql, $bind);
+    return $class->_get_iterator($sql, $sth, $opt_table_info);
 }
 
 sub _get_iterator {
-    my ($class, $sql, $sth) = @_;
+    my ($class, $sql, $sth, $opt_table_info) = @_;
 
     return DBIx::Skinny::Iterator->new(
-        skinny    => $class,
-        sth       => $sth,
-        row_class => $class->_mk_row_class($sql),
+        skinny         => $class,
+        sth            => $sth,
+        row_class      => $class->_mk_row_class($sql),
+        opt_table_info => $opt_table_info
     );
 }
 

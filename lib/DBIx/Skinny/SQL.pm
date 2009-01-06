@@ -281,7 +281,7 @@ sub _add_index_hint {
 
 sub retrieve {
     my $self = shift;
-    $self->skinny->search_by_sql($self->as_sql,@{$self->bind});
+    $self->skinny->search_by_sql($self->as_sql, $self->bind, $self->from->[0]);
 }
 
 'base code from Data::ObjectDriver::SQL';

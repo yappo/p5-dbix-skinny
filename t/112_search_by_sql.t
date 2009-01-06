@@ -18,7 +18,7 @@ describe 'search_by_sql test' => run {
     };
 
     test 'search_by_sql' => run {
-        my $itr = Mock::Basic->search_by_sql(q{SELECT * FROM mock_basic WHERE id = ?}, 1);
+        my $itr = Mock::Basic->search_by_sql(q{SELECT * FROM mock_basic WHERE id = ?}, [1]);
         isa_ok $itr, 'DBIx::Skinny::Iterator';
 
         my $row = $itr->first;

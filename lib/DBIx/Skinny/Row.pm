@@ -4,7 +4,7 @@ use warnings;
 use DBIx::Skinny::Accessor;
 use Carp;
 
-mk_accessors(qw/ row_data skinny select_columns /);
+mk_accessors(qw/ row_data skinny select_columns opt_table_info /);
 
 sub setup {
     my $self = shift;
@@ -52,19 +52,25 @@ sub get_columns {
 }
 
 sub update {
-    my ($self, $table, $args) = @_;
+    my ($self, $args, $table) = @_;
+    $table ||= $self->opt_table_info;
     my $where = $self->_update_or_delete_cond($table);
     $self->skinny->update($table, $args, $where);
 }
 
 sub delete {
     my ($self, $table) = @_;
+    $table ||= $self->opt_table_info;
     my $where = $self->_update_or_delete_cond($table);
     $self->skinny->delete($table, $where);
 }
 
 sub _update_or_delete_cond {
     my ($self, $table) = @_;
+
+    unless ($table) {
+        croak "no table info";
+    }
 
     my $schema_info = $self->skinny->schema->schema_info;
     unless ( $schema_info->{$table} ) {
