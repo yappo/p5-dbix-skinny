@@ -90,6 +90,7 @@ sub call_schema_trigger {
 #--------------------------------------------------------------------------------
 sub do {
     my ($class, $sql) = @_;
+    $class->profiler->record_query($sql);
     $class->dbh->do($sql);
 }
 
@@ -283,7 +284,6 @@ sub delete {
 }
 
 *find_or_insert = \*find_or_create;
-
 sub find_or_create {
     my ($class, $table, $args) = @_;
     my $row = $class->single($table, $args);
@@ -351,7 +351,7 @@ DBIx::Skinny - simple DBI wrapper/ORMapper
             id   => 1,
         }
     );
-    $row->update('user',{name => 'nekokak'});
+    $row->update({name => 'nekokak'});
 
     $row = Your::Model->search_by_sql(q{SELECT id, name FROM user WHERE id = ?},1);
     $row->delete('user')
