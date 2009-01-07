@@ -48,7 +48,7 @@ sub import {
             dbh _connect
             call_schema_trigger
             do resultset search single search_by_sql count
-            data2itr
+            data2itr find_or_new
                 _get_sth_iterator _mk_row_class
             insert bulk_insert create update delete find_or_create find_or_insert
                 _add_where
@@ -162,6 +162,11 @@ sub search_by_sql {
     $class->profiler->record_query($sql);
     my $sth = $class->_execute($sql, $bind);
     return $class->_get_sth_iterator($sql, $sth, $opt_table_info);
+}
+
+sub find_or_new {
+    my ($class, $table, $args) = @_;
+    my $row = $class->single($table, $args) or $class->data2itr($table, [$args])->first;
 }
 
 sub _get_sth_iterator {

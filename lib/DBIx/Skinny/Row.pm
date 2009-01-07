@@ -54,6 +54,11 @@ sub get_columns {
     return \%data;
 }
 
+sub insert {
+    my $self = shift;
+    $self->skinny->find_or_create($self->opt_table_info, $self->get_columns);
+}
+
 sub update {
     my ($self, $args, $table) = @_;
     $table ||= $self->opt_table_info;
