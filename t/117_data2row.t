@@ -5,12 +5,19 @@ use Test::Declare;
 
 use lib './t';
 use Mock::Inflate;
+use Mock::Inflate::Name;
 
 plan tests => blocks;
 
 describe 'data to iterator object' => run {
     init {
         Mock::Inflate->setup_test_db;
+        Mock::Inflate->insert('mock_inflate',
+            {
+                id   => 1,
+                name => Mock::Inflate::Name->new(name => 'perl'),
+            }
+        );
     };
 
     test 'data2itr method' => run {
@@ -49,6 +56,13 @@ describe 'data to iterator object' => run {
 
         my $row = $itr->reset->first;
         isa_ok $row->name, 'Mock::Inflate::Name';
+
+        my $new_name = Mock::Inflate::Name->new(name => 'c++');
+        my $new_row = $row->update({name => $new_name});
+
+        isa_ok $new_row, 'DBIx::Skinny::Row';
+        isa_ok $new_row->name, 'Mock::Inflate::Name';
+        is $new_row->name, 'c++';
     };
 };
 
