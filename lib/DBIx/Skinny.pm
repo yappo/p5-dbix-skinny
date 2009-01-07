@@ -48,7 +48,8 @@ sub import {
             dbh _connect
             call_schema_trigger
             do resultset search single search_by_sql count
-                _get_iterator _mk_row_class
+            data2itr
+                _get_sth_iterator _mk_row_class
             insert bulk_insert create update delete find_or_create find_or_insert
                 _add_where
             _execute _close_sth
@@ -160,10 +161,10 @@ sub search_by_sql {
 
     $class->profiler->record_query($sql);
     my $sth = $class->_execute($sql, $bind);
-    return $class->_get_iterator($sql, $sth, $opt_table_info);
+    return $class->_get_sth_iterator($sql, $sth, $opt_table_info);
 }
 
-sub _get_iterator {
+sub _get_sth_iterator {
     my ($class, $sql, $sth, $opt_table_info) = @_;
 
     return DBIx::Skinny::Iterator->new(
@@ -174,12 +175,23 @@ sub _get_iterator {
     );
 }
 
+sub data2itr {
+    my ($class, $table, $data) = @_;
+
+    return DBIx::Skinny::Iterator->new(
+        skinny         => $class,
+        data           => $data,
+        row_class      => $class->_mk_row_class($table.$data),
+        opt_table_info => $table,
+    );
+}
+
 sub _mk_row_class {
-    my ($class, $sql) = @_;
+    my ($class, $key) = @_;
 
     my $row_class = 'DBIx::Skinny::Row::C';
-    for my $i (0..(int(length($sql) / 8))) {
-        $row_class .= crypt(substr($sql,($i*8),8), 'mk');
+    for my $i (0..(int(length($key) / 8))) {
+        $row_class .= crypt(substr($key,($i*8),8), 'mk');
     }
     { no strict 'refs'; @{"$row_class\::ISA"} = ('DBIx::Skinny::Row'); }
 

@@ -21,10 +21,20 @@ sub iterator {
         return $row_cache;
     }
 
-    my $row = $self->{sth}->fetchrow_hashref();
-    unless ( $row ) {
-        $self->{skinny}->_close_sth($self->{sth});
-        return;
+    my $row;
+    if ($self->{sth}) {
+        $row = $self->{sth}->fetchrow_hashref();
+        unless ( $row ) {
+            $self->{skinny}->_close_sth($self->{sth});
+            return;
+        }
+    } elsif ($self->{data} && ref $self->{data} eq 'ARRAY') {
+        $row = shift @{$self->{data}};
+        unless ( $row ) {
+            return;
+        }
+    } else {
+        die 'invalid case.';
     }
 
     my $obj = $self->{row_class}->new(
@@ -72,6 +82,7 @@ sub reset {
 sub count {
     my $self = shift;
     my @rows = $self->reset->all;
+    $self->reset;
     scalar @rows;
 }
 

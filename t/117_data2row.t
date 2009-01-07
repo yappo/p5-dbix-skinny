@@ -1,0 +1,54 @@
+use strict;
+use warnings;
+use utf8;
+use Test::Declare;
+
+use lib './t';
+use Mock::Inflate;
+
+plan tests => blocks;
+
+describe 'data to iterator object' => run {
+    init {
+        Mock::Inflate->setup_test_db;
+    };
+
+    test 'data2itr method' => run {
+        my $itr = Mock::Inflate->data2itr('mock_inflate',[
+            {
+                id   => 1,
+                name => 'perl',
+            },
+            {
+                id   => 2,
+                name => 'ruby',
+            },
+            {
+                id   => 3,
+                name => 'python',
+            },
+        ]);
+        isa_ok $itr, 'DBIx::Skinny::Iterator';
+        is $itr->count, 3;
+
+        my $rows = [map { $_->get_columns } $itr->all];
+        is_deeply $rows,  [
+            {
+                name => 'perl',
+                id   => 1,
+            },
+            {
+                name => 'ruby',
+                id   => 2,
+            },
+            {
+                name => 'python',
+                id   => 3,
+            }
+        ];
+
+        my $row = $itr->reset->first;
+        isa_ok $row->name, 'Mock::Inflate::Name';
+    };
+};
+

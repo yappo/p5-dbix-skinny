@@ -6,11 +6,14 @@ use Carp;
 
 mk_accessors(qw/ row_data skinny select_columns opt_table_info /);
 
+sub init {
+    my $self = shift;
+    $self->select_columns([keys %{$self->row_data}]);
+}
+
 sub setup {
     my $self = shift;
     my $class = ref $self;
-
-    $self->select_columns([keys %{$self->row_data}]);
 
     for my $alias ( @{$self->select_columns} ) {
         (my $col = lc $alias) =~ s/.+\.(.+)/$1/o;
