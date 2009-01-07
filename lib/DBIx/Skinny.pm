@@ -166,7 +166,11 @@ sub search_by_sql {
 
 sub find_or_new {
     my ($class, $table, $args) = @_;
-    my $row = $class->single($table, $args) or $class->data2itr($table, [$args])->first;
+    my $row = $class->single($table, $args);
+    unless ($row) {
+        $row = $class->data2itr($table, [$args])->first;
+    }
+    return $row;
 }
 
 sub _get_sth_iterator {
