@@ -19,16 +19,15 @@ describe 'count test' => run {
             name => 'perl',
         });
 
-        is +Mock::Basic->count('mock_basic' => {count => 'id'})->count, 1;
-        is +Mock::Basic->count('mock_basic' => {cnt => 'id'})->cnt, 1;
+        is +Mock::Basic->count('mock_basic' => 'id'), 1;
 
         Mock::Basic->insert('mock_basic',{
             id   => 2,
             name => 'ruby',
         });
 
-        is +Mock::Basic->count('mock_basic' => {count => 'id'})->count, 2;
-        is +Mock::Basic->count('mock_basic' => {count => 'id'},{name => 'perl'})->count, 1;
+        is +Mock::Basic->count('mock_basic' => 'id'), 2;
+        is +Mock::Basic->count('mock_basic' => 'id',{name => 'perl'}), 1;
     };
 
     test 'iterator count' => run {

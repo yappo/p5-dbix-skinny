@@ -31,7 +31,7 @@ describe 'basic test' => run {
 
     test 'insert' => run {
         Mock::DBH->insert('mock_dbh',{id => 1 ,name => 'nekokak'});
-        is +Mock::DBH->count('mock_dbh',{count => 'id'},{name => 'nekokak'})->count, 1;
+        is +Mock::DBH->count('mock_dbh','id',{name => 'nekokak'}), 1;
     };
 };
 

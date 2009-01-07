@@ -30,7 +30,7 @@ describe 'insert test' => run {
                 name => 'python',
             },
         ]);
-        is +Mock::Basic->count('mock_basic',{count => 'id'})->count, 3;
+        is +Mock::Basic->count('mock_basic', 'id'), 3;
 
         Mock::BasicMySQL->bulk_insert('mock_basic_mysql',[
             {
@@ -46,7 +46,7 @@ describe 'insert test' => run {
                 name => 'python',
             },
         ]);
-        is +Mock::BasicMySQL->count('mock_basic_mysql',{count => 'id'})->count, 3;
+        is +Mock::BasicMySQL->count('mock_basic_mysql', 'id'), 3;
     };
     cleanup {
         Mock::BasicMySQL->cleanup_test_db;

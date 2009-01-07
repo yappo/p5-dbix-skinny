@@ -76,8 +76,7 @@ describe 'trigger test' => run {
     test 'pre_delete/post_delete' => run {
         Mock::Trigger->delete('mock_trigger_pre',{});
 
-        my $cnt = Mock::Trigger->count('mock_trigger_post',{count => 'id'},{});
-        is +Mock::Trigger->count('mock_trigger_post',{count => 'id'},{})->count, 0;
+        is +Mock::Trigger->count('mock_trigger_post', 'id',{}), 0;
 
         my $row = Mock::Trigger->single('mock_trigger_post_delete',{id => 1});
         isa_ok $row, 'DBIx::Skinny::Row';

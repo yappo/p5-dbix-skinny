@@ -95,7 +95,7 @@ sub do {
 }
 
 sub count {
-    my ($class, $table, $args, $where) = @_;
+    my ($class, $table, $column, $where) = @_;
 
     my $rs = $class->resultset(
         {
@@ -103,11 +103,10 @@ sub count {
         }
     );
 
-    my ($alias, $column) = each %$args;
-    $rs->add_select("COUNT($column)" =>  $alias);
+    $rs->add_select("COUNT($column)" =>  'cnt');
     $class->_add_where($rs, $where);
 
-    $rs->retrieve->first;
+    $rs->retrieve->first->cnt;
 }
 
 sub resultset {

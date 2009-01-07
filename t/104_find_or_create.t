@@ -26,7 +26,7 @@ describe 'find_or_create test' => run {
         });
         is $mock_basic->name, 'perl';
 
-        is +Mock::Basic->count('mock_basic',{count => 'id'},{name => 'perl'})->count, 1;
+        is +Mock::Basic->count('mock_basic', 'id',{name => 'perl'}), 1;
     };
 
     test 'find_or_insert' => run {
@@ -42,7 +42,7 @@ describe 'find_or_create test' => run {
         });
         is $mock_basic->name, 'ruby';
 
-        is +Mock::Basic->count('mock_basic',{count => 'id'},{name => 'ruby'})->count, 1;
+        is +Mock::Basic->count('mock_basic', 'id',{name => 'ruby'}), 1;
     };
 };
 
