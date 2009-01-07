@@ -25,5 +25,25 @@ describe 'get_columns test' => run {
         is $data->{id}, 1;
         is $data->{name}, 'perl';
     };
+
+    test 'get_columns multi line' => run {
+        my $row = Mock::Basic->insert('mock_basic',{
+            id   => 2,
+            name => 'ruby',
+        });
+        isa_ok $row, 'DBIx::Skinny::Row';
+
+        my $data = [map {$_->get_columns} Mock::Basic->search('mock_basic')->all];
+        is_deeply $data, [
+            {
+                name => 'perl',
+                id   => 1,
+            },
+            {
+                name => 'ruby',
+                id   => 2,
+            }
+        ];
+    };
 };
 
