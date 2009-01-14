@@ -25,11 +25,14 @@ sub _normalize {
 }
 
 sub record_query {
-    my ($self, $sql) = @_;
+    my ($self, $sql, $bind) = @_;
 
-    $sql = _normalize($sql);
+    my $log = _normalize($sql);
+    if (my $bind_value = join ', ', @{$bind||[]} ) {
+        $log .= ' :binds ' . $bind_value;
+    }
 
-    push @{ $self->query_log }, $sql;
+    push @{ $self->query_log }, $log;
 }
 
 1;

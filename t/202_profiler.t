@@ -38,5 +38,23 @@ describe 'profiler test' => run {
         $profiler->reset;
         is_deeply $profiler->query_log, [];
     };
+
+    test 'recorde bind values' => run {
+        $profiler->record_query(q{
+            SELECT id FROM user WHERE id = ?
+        },[1]);
+        is_deeply $profiler->query_log, [
+            q{SELECT id FROM user WHERE id = ? :binds 1},
+        ];
+
+        $profiler->record_query(q{
+            SELECT id FROM user WHERE (id = ? OR id = ?)
+        },[1, 2]);
+
+        is_deeply $profiler->query_log, [
+            q{SELECT id FROM user WHERE id = ? :binds 1},
+            q{SELECT id FROM user WHERE (id = ? OR id = ?) :binds 1, 2},
+        ];
+    };
 };
 

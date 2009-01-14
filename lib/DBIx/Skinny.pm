@@ -159,7 +159,7 @@ sub single {
 sub search_by_sql {
     my ($class, $sql, $bind, $opt_table_info) = @_;
 
-    $class->profiler->record_query($sql);
+    $class->profiler->record_query($sql, $bind);
     my $sth = $class->_execute($sql, $bind);
     return $class->_get_sth_iterator($sql, $sth, $opt_table_info);
 }
@@ -229,7 +229,7 @@ sub insert {
     $sql .= '(' . join(', ', @cols) . ')' . "\n" .
             'VALUES (' . join(', ', ('?') x @cols) . ')' . "\n";
 
-    $class->profiler->record_query($sql);
+    $class->profiler->record_query($sql, \@bind);
     my $sth = $class->_execute($sql, \@bind);
 
     my $id = $class->attribute->{dbd}->last_insert_id($class->dbh, $sth);
@@ -269,7 +269,7 @@ sub update {
 
     my $sql = "UPDATE $table SET " . join(', ', @set) . ' ' . $stmt->as_sql_where;
 
-    $class->profiler->record_query($sql);
+    $class->profiler->record_query($sql, \@bind);
     $class->_execute($sql, \@bind);
 
     for my $col (@{$class->schema->schema_info->{$table}->{columns}}) {
@@ -297,7 +297,7 @@ sub delete {
     $class->_add_where($stmt, $where);
 
     my $sql = "DELETE " . $stmt->as_sql;
-    $class->profiler->record_query($sql);
+    $class->profiler->record_query($sql, $stmt->bind);
     $class->_execute($sql, $stmt->bind);
 
     $class->call_schema_trigger('post_delete', $table);
