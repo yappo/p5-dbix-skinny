@@ -66,10 +66,11 @@ sub import {
 
 sub schema { shift->attribute->{schema} }
 sub profiler {
-    my ($class, $sql) = @_;
-    if ($class->attribute->{profile}) {
-        $class->attribute->{profiler}->record_query($sql);
+    my ($class, $sql, $bind) = @_;
+    if ($class->attribute->{profile} && $sql) {
+        $class->attribute->{profiler}->record_query($sql, $bind);
     }
+    return $class->attribute->{profiler};
 }
 
 #--------------------------------------------------------------------------------
