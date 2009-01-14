@@ -31,7 +31,7 @@ sub bulk_insert {
     my $values = '(' . join(', ', ('?') x @cols) . ')' . "\n";
     $sql .= join(',', ($values) x (scalar(@bind) / scalar(@cols)));
 
-    $skinny->profiler->record_query($sql, \@bind);
+    $skinny->profiler($sql, \@bind);
     $skinny->_execute($sql, \@bind);
 
     return 1;
