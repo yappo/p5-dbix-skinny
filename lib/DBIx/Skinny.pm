@@ -21,20 +21,14 @@ sub import {
     eval "use $schema"; ## no critic
     die $@ if $@;
 
-    my $dbd_type;
-    if ($args->{dbh}) {
-        $dbd_type = $args->{dbh}->{Driver}->{Name};
-    } else {
-        (undef, $dbd_type,) = DBI->parse_dsn($args->{dsn}) or die "can't parse DSN";
-    }
-
+    my $dbd_type = _dbd_type($args);
     my $_attribute = +{
         dsn             => $args->{dsn},
         username        => $args->{username},
         password        => $args->{password},
         connect_options => $args->{connect_options},
         dbh             => $args->{dbh}||'',
-        dbd             => DBIx::Skinny::DBD->new($dbd_type),
+        dbd             => $dbd_type ? DBIx::Skinny::DBD->new($dbd_type) : undef,
         schema          => $schema,
         profiler        => DBIx::Skinny::Profiler->new,
         profile         => $ENV{SKINNY_PROFILE}||0,
@@ -46,7 +40,7 @@ sub import {
 
         my @functions = qw/
             schema profiler
-            dbh _connect
+            dbh _connect connect_info _dbd_type
             call_schema_trigger
             do resultset search single search_by_sql count
             data2itr find_or_new
@@ -75,6 +69,18 @@ sub profiler {
 
 #--------------------------------------------------------------------------------
 # db handling
+sub connect_info {
+    my ($class, $connect_info) = @_;
+
+    $class->attribute->{dsn} = $connect_info->{dsn};
+    $class->attribute->{username} = $connect_info->{username};
+    $class->attribute->{password} = $connect_info->{password};
+    $class->attribute->{connect_options} = $connect_info->{connect_options};
+
+    my $dbd_type = _dbd_type($connect_info);
+    $class->attribute->{dbd} = DBIx::Skinny::DBD->new($dbd_type);
+}
+
 sub _connect {
     my $class = shift;
     $class->attribute->{dbh} ||= DBI->connect(
@@ -87,6 +93,17 @@ sub _connect {
 }
 
 sub dbh { shift->_connect }
+
+sub _dbd_type {
+    my $args = shift;
+    my $dbd_type;
+    if ($args->{dbh}) {
+        $dbd_type = $args->{dbh}->{Driver}->{Name};
+    } elsif ($args->{dsn}) {
+        (undef, $dbd_type,) = DBI->parse_dsn($args->{dsn}) or die "can't parse DSN";
+    }
+    return $dbd_type;
+}
 
 #--------------------------------------------------------------------------------
 # schema trigger call
