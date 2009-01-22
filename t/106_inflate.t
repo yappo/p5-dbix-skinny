@@ -30,7 +30,8 @@ describe 'inflate/deflate test' => run {
     test 'update mock_inflate data' => run {
         my $name = Mock::Inflate::Name->new(name => 'ruby');
 
-        my $row = Mock::Inflate->update('mock_inflate',{name => $name},{id => 1});
+        ok +Mock::Inflate->update('mock_inflate',{name => $name},{id => 1});
+        my $row = Mock::Inflate->single('mock_inflate',{id => 1});
 
         isa_ok $row, 'DBIx::Skinny::Row';
         isa_ok $row->name, 'Mock::Inflate::Name';

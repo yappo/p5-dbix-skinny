@@ -58,11 +58,7 @@ describe 'data to iterator object' => run {
         isa_ok $row->name, 'Mock::Inflate::Name';
 
         my $new_name = Mock::Inflate::Name->new(name => 'c++');
-        my $new_row = $row->update({name => $new_name});
-
-        isa_ok $new_row, 'DBIx::Skinny::Row';
-        isa_ok $new_row->name, 'Mock::Inflate::Name';
-        is $new_row->name, 'c++';
+        ok $row->update({name => $new_name});
     };
 };
 

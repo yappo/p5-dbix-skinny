@@ -25,7 +25,8 @@ describe 'utf8 test' => run {
     };
 
     test 'update mock_utf8 data' => run {
-        my $row = Mock::UTF8->update('mock_utf8',{name => 'るびー'},{id => 1});
+        ok +Mock::UTF8->update('mock_utf8',{name => 'るびー'},{id => 1});
+        my $row = Mock::UTF8->single('mock_utf8',{id => 1});
 
         isa_ok $row, 'DBIx::Skinny::Row';
         ok utf8::is_utf8($row->name);

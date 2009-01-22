@@ -64,13 +64,12 @@ describe 'trigger test' => run {
     };
 
     test 'pre_update/post_update' => run {
-        my $row = Mock::Trigger->update('mock_trigger_pre',{});
-        isa_ok $row, 'DBIx::Skinny::Row';
-        is $row->name, 'pre_update';
+        ok +Mock::Trigger->update('mock_trigger_pre',{});
 
         my $p_row = Mock::Trigger->single('mock_trigger_post',{id => 1});
         isa_ok $p_row, 'DBIx::Skinny::Row';
         is $p_row->name, 'post_update';
+
     };
 
     test 'pre_delete/post_delete' => run {

@@ -18,7 +18,8 @@ describe 'update test' => run {
     };
 
     test 'update mock_basic data' => run {
-        my $row = Mock::Basic->update('mock_basic',{name => 'python'},{id => 1});
+        ok +Mock::Basic->update('mock_basic',{name => 'python'},{id => 1});
+        my $row = Mock::Basic->single('mock_basic',{id => 1});
 
         isa_ok $row, 'DBIx::Skinny::Row';
         is $row->name, 'python';
@@ -28,8 +29,9 @@ describe 'update test' => run {
         my $row = Mock::Basic->single('mock_basic',{id => 1});
         is $row->name, 'python';
 
-        $row = $row->update({name => 'perl'});
-        is $row->name, 'perl';
+        ok $row->update({name => 'perl'});
+        my $new_row = Mock::Basic->single('mock_basic',{id => 1});
+        is $new_row->name, 'perl';
     };
 };
 
