@@ -19,11 +19,11 @@ sub setup {
         (my $col = lc $alias) =~ s/.+\.(.+)/$1/o;
         next if $class->can($col);
         no strict 'refs';
-        *{"$class\::$col"} = $self->_razy_get_data($col);
+        *{"$class\::$col"} = $self->_lazy_get_data($col);
     }
 }
 
-sub _razy_get_data {
+sub _lazy_get_data {
     my ($self, $col) = @_;
 
     return sub {
