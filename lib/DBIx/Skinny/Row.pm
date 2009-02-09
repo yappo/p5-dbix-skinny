@@ -4,7 +4,7 @@ use warnings;
 use DBIx::Skinny::Accessor;
 use Carp;
 
-mk_accessors(qw/ row_data skinny select_columns opt_table_info /);
+mk_accessors(qw/ row_data skinny select_columns opt_table_info get_column_cache /);
 
 sub init {
     my $self = shift;
@@ -21,6 +21,8 @@ sub setup {
         no strict 'refs';
         *{"$class\::$col"} = $self->_lazy_get_data($col);
     }
+
+    $self->{get_column_cache} = {};
 }
 
 sub _lazy_get_data {
@@ -29,8 +31,11 @@ sub _lazy_get_data {
     return sub {
         my $self = shift;
 
-        my $data = $self->get_column($col);
-        $self->skinny->schema->call_inflate($col, $data);
+        unless ( $self->{get_column_cache}->{$col} ) {
+          my $data = $self->get_column($col);
+          $self->{get_column_cache}->{$col} = $self->skinny->schema->call_inflate($col, $data);
+        }
+        $self->{get_column_cache}->{$col};
     };
 }
 
