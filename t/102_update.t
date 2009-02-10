@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use utf8;
 use Test::Declare;
+use YAML;
 
 use lib './t';
 use Mock::Basic;
@@ -32,6 +33,13 @@ describe 'update test' => run {
         ok $row->update({name => 'perl'});
         my $new_row = Mock::Basic->single('mock_basic',{id => 1});
         is $new_row->name, 'perl';
+    };
+
+    cleanup {
+        if ( $ENV{SKINNY_PROFILE} ) {
+            warn "query log";
+            warn YAML::Dump(Mock::Basic->profiler->query_log);
+        }
     };
 };
 

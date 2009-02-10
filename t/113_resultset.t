@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use utf8;
 use Test::Declare;
+use YAML;
 
 use lib './t';
 use Mock::Basic;
@@ -33,6 +34,13 @@ describe 'resultset test' => run {
         isa_ok $row, 'DBIx::Skinny::Row';
     
         is $row->name, 'perl';
+    };
+
+    cleanup {
+        if ( $ENV{SKINNY_PROFILE} ) {
+            warn "query log";
+            warn YAML::Dump(Mock::Basic->profiler->query_log);
+        }
     };
 };
 

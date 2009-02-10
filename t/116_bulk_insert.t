@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use utf8;
 use Test::Declare;
+use YAML;
 
 use lib './t';
 use Mock::Basic;
@@ -49,6 +50,10 @@ describe 'insert test' => run {
         is +Mock::BasicMySQL->count('mock_basic_mysql', 'id'), 3;
     };
     cleanup {
+        if ( $ENV{SKINNY_PROFILE} ) {
+            warn "query log";
+            warn YAML::Dump(Mock::BasicMySQL->profiler->query_log);
+        }
         Mock::BasicMySQL->cleanup_test_db;
     };
 };

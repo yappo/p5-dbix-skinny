@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use utf8;
 use Test::Declare;
+use YAML;
 
 use lib './t';
 use Mock::Basic;
@@ -43,6 +44,13 @@ describe 'find_or_create test' => run {
         is $mock_basic->name, 'ruby';
 
         is +Mock::Basic->count('mock_basic', 'id',{name => 'ruby'}), 1;
+    };
+
+    cleanup {
+        if ( $ENV{SKINNY_PROFILE} ) {
+            warn "query log";
+            warn YAML::Dump(Mock::Basic->profiler->query_log);
+        }
     };
 };
 

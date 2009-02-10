@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use utf8;
 use Test::Declare;
+use YAML;
 
 use lib './t';
 use Mock::Trigger;
@@ -80,6 +81,13 @@ describe 'trigger test' => run {
         my $row = Mock::Trigger->single('mock_trigger_post_delete',{id => 1});
         isa_ok $row, 'DBIx::Skinny::Row';
         is $row->name, 'post_delete';
+    };
+
+    cleanup {
+        if ( $ENV{SKINNY_PROFILE} ) {
+            warn "query log";
+            warn YAML::Dump(Mock::Basic->profiler->query_log);
+        }
     };
 };
 
