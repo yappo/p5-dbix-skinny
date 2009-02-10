@@ -36,4 +36,6 @@ __END__
  2 wallclock secs ( 2.00 usr +  0.00 sys =  2.00 CPU) @ 43.50/s (n=87)
 2009-02-10 23:10
  2 wallclock secs ( 2.16 usr +  0.00 sys =  2.16 CPU) @ 33.80/s (n=73)
+2009-02-10 23:16
+ 2 wallclock secs ( 2.11 usr +  0.00 sys =  2.11 CPU) @ 39.34/s (n=83)
 
