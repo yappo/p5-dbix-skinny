@@ -44,5 +44,17 @@ describe 'search_named test' => run {
         is $row[1]->name, 'ruby';
     };
 
+    test 'search_named' => run {
+        Mock::Basic->attribute->{profile} = 1;
+        my $itr = Mock::Basic->search_named(q{SELECT * FROM mock_basic WHERE id = :id limit %d}, {id => 1},[100]);
+        isa_ok $itr, 'DBIx::Skinny::Iterator';
+
+        my $row = $itr->first;
+        isa_ok $row, 'DBIx::Skinny::Row';
+        is $row->id , 1;
+        is $row->name, 'perl';
+
+        is_deeply +Mock::Basic->profiler->query_log, ['SELECT * FROM mock_basic WHERE id = ? limit 100 :binds 1'];
+    };
 };
 
